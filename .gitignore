@@ -9,3 +9,7 @@ node_modules
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 drizzle
+/python/__pycache__
+/python/log
+/python/venv
+/python/test.py

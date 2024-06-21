@@ -1,6 +1,8 @@
-import { fail, redirect } from "@sveltejs/kit";
+import { WEBSITE_URL } from "$env/static/private";
 
-import { superValidate, setError, message } from 'sveltekit-superforms';
+import { fail } from "@sveltejs/kit";
+
+import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { userSchema } from "$lib/server/config/zodSchemas.js";
 
@@ -8,9 +10,12 @@ import { eq } from 'drizzle-orm';
 import { db } from "$lib/server/db";
 import { userTable } from "$lib/server/db/schema";
 
-import { lucia } from '$lib/server/auth';
-import { createAndSetSession } from "$lib/server/auth/utils";
 import { createPasswordResetToken } from "$lib/server/auth/utils";
+
+import { render } from "@react-email/render";
+import { sendEmail } from "$lib/server/email/sendEmail";
+import { ResetEmail } from "$lib/emails/reset-email";
+
 
 const resetSchema = userSchema.pick({
     email: true
@@ -23,7 +28,7 @@ export const load = (async () => {
 });
 
 export const actions = {
-    default: async ({ request, cookies }) => {
+    default: async ({ request }) => {
         // get form data and validate them
         const form = await superValidate(request, zod(resetSchema));
 
@@ -32,23 +37,50 @@ export const actions = {
             return fail(400, { form });
         }
 
-        // If the submitted form was valid check if user with the submitted email exists
-        const resultEmail = await db.select({
-            email: userTable.email
-        }).from(userTable).where(eq(userTable.email, form.data.email));
+        // Select user with the submitted email
+        const [existingUser] = await db
+            .select({
+                id: userTable.id
+            })
+            .from(userTable)
+            .where(eq(userTable.email, form.data.email));
 
-        const emailExists = resultEmail.length > 0;
-
-        if (!emailExists) {
-            return message(form, "Nesprávný e-mail nebo heslo", {
-                status: 401
-            });
+        // If the submitted email wasn't found in the database
+        if (!existingUser) {
+            return { form };
         }
 
-        // Login the user
-        await createAndSetSession(lucia, existingUser.id, cookies);
+        // Create password reset token and URL for the submitted email
+        const verificationToken = await createPasswordResetToken(existingUser.id);
+        const verificationLink = `${WEBSITE_URL}/reset/${verificationToken}`;
 
-        // redirect to /
-        throw redirect(303, "/");
+        // Render component to HTML email
+        const emailHtml = render(ResetEmail({
+            email: form.data.email,
+            verificationLink: verificationLink
+        }), {
+            pretty: true
+        });
+
+        // Render component to plain text
+        const plainText = render(ResetEmail({
+            email: form.data.email,
+            verificationLink: verificationLink
+        }), {
+            plainText: true
+        });
+
+
+        // Email options
+        const options = {
+            to: form.data.email,
+            subject: "[EEM] Obnova hesla",
+            html: emailHtml,
+            plainText: plainText
+        }
+
+        // Send email with password reset link
+        sendEmail(options);
+        return { form };
     },
 };

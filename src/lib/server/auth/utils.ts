@@ -29,7 +29,7 @@ export const deleteSessionCookie = async (lucia: Lucia, cookies: Cookies) => {
     });
 };
 
-async function createPasswordResetToken(userId: string): Promise<string> {
+export const createPasswordResetToken = async (userId: string) => {
     // invalidate all existing tokens
     await db.delete(passwordResetTable).where(eq(passwordResetTable.userId, userId));
 
@@ -45,4 +45,4 @@ async function createPasswordResetToken(userId: string): Promise<string> {
     });
 
     return tokenId;
-}
+};

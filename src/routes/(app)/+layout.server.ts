@@ -4,11 +4,13 @@ import { eq } from 'drizzle-orm';
 import { db } from "$lib/server/db";
 import { profileTable } from "$lib/server/db/schema";
 
-export const load = async ({ locals }) => {
+import { loadFlash } from 'sveltekit-flash-message/server';
+
+export const load = loadFlash(async ({ locals }) => {
     const user = locals.user;
 
     // Check user is not logged in redirect to /login
-    if (!user) throw redirect(303, "/login");
+    if (!user) redirect(303, "/login");
 
     // Get user's profile
     const [profile] = await db
@@ -23,4 +25,4 @@ export const load = async ({ locals }) => {
         user: user,
         profile: profile,
     };
-};
+});

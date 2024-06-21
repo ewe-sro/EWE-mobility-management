@@ -1,24 +1,26 @@
-<script>
+<script lang="ts">
 	import * as Card from '$lib/components/ui/card';
-
-	export let data;
 </script>
 
-<section class="py-32 ~px-4/8">
-	<div class="container m-auto grid grid-cols-2 gap-12">
-		{#each data.controllers as controller}
-			<Card.Root>
-				<Card.Header>
-					<Card.Title>{controller.deviceUid}</Card.Title>
-					<Card.Description>{controller.chargingPointName}</Card.Description>
-				</Card.Header>
-				<Card.Content>
-					<p>Card Content</p>
-				</Card.Content>
-				<Card.Footer>
-					<p>Card Footer</p>
-				</Card.Footer>
-			</Card.Root>
-		{/each}
+<section class="h-full ~p-4/8">
+	<div class="container m-auto flex flex-col gap-8 h-full">
+		<h1 class="text-3xl font-bold">Nástěnka</h1>
+
+		<div class="flex-1 grid grid-cols-12 items-start gap-4">
+			<div class="col-span-12 flex gap-4">
+				<Card.Root class="flex-1">
+					<Card.Header>
+						<Card.Title></Card.Title>
+						<Card.Description></Card.Description>
+					</Card.Header>
+					<Card.Content>
+						<p>Card Content</p>
+					</Card.Content>
+					<Card.Footer>
+						<p>Card Footer</p>
+					</Card.Footer>
+				</Card.Root>
+			</div>
+		</div>
 	</div>
 </section>

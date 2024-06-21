@@ -1,16 +1,20 @@
-FROM node:18-alpine AS builder
+# Build with:   docker build -t IMAGE_NAME .
+# Run with:     docker run -p 3000:3000 --name IMAGE_NAME IMAGE_NAME
 
-# A small line inside the image to show who made it
-LABEL Developers="EWE s.r.o."
-
-# The WORKDIR instruction sets the working directory for everything that will happen next
+FROM node:20-alpine AS build
 WORKDIR /app
-
-# Copy all local files into the image
-COPY . .
-
-# Clean install all node modules
+COPY ./package*.json ./
 RUN npm ci
-
-# Build SvelteKit app
+COPY . .
 RUN npm run build
+RUN npm prune --production
+ENV NODE_ENV="production"
+
+FROM node:20-alpine AS production
+COPY --from=build /app/build .
+COPY --from=build /app/package.json .
+COPY --from=build /app/package-lock.json .
+RUN npm ci --omit-dev
+
+EXPOSE 3000
+CMD ["node", "-r", "dotenv/config", "."]

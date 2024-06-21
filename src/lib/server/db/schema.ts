@@ -1,8 +1,9 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
 // Import data types
 import {
-    integer, pgTable, serial, varchar, text, timestamp, boolean
+    integer, decimal, pgTable, serial, varchar, text, timestamp, primaryKey,
+    boolean
 } from "drizzle-orm/pg-core";
 
 // Define database tables
@@ -13,26 +14,119 @@ export const chargerTable = pgTable("charger", {
     ipAddress: varchar("ip_address", { length: 50 }),
     mqttPort: integer("mqtt_port").default(1883),
     mqttUser: varchar("mqtt_user", { length: 75 }),
-    mqttPassword: text("password"),
+    mqttPassword: text("mqtt_password"),
     restApiPort: integer("rest_api_port").default(5555),
+    companyId: integer("company_id").references(() => companyTable.id, { onDelete: 'cascade' }),
+    userId: text('user_id').references(() => userTable.id, { onDelete: 'set null' }),
 });
 
 export const chargingControllerTable = pgTable("charging_controller", {
-    id: serial("id").primaryKey(),
-    deviceUid: varchar("device_uid", { length: 10 }).notNull(),
+    id: text("id").primaryKey(),
+    chargingPointId: integer("charging_point_id"),
     chargingPointName: varchar("charging_point_name", { length: 256 }),
+    deviceName: varchar("device_name", { length: 256 }),
     parentDeviceUid: varchar("parent_device_uid", { length: 10 }),
     position: integer("position"),
-    chargerId: integer("charger_id").notNull().references(() => chargerTable.id)
+    firmwareVersion: varchar("firmware_version", { length: 50 }),
+    hardwareVersion: varchar("hardware_version", { length: 50 }),
+    chargerId: integer("charger_id").notNull().references(() => chargerTable.id, { onDelete: 'cascade' })
 });
+
+export const chargingSessionTable = pgTable("charging_session", {
+    id: serial("id").primaryKey(),
+    startRealPower: decimal("start_real_power"),
+    endRealPower: decimal("end_real_power"),
+    consumption: decimal("consumption"),
+    startTimestamp: timestamp("start_timestamp", {
+        withTimezone: false,
+        mode: "date"
+    }),
+    endTimestamp: timestamp("end_timestamp", {
+        withTimezone: false,
+        mode: "date"
+    }),
+    duration: integer("duration"),
+    rfidTag: text("rfid_tag"),
+    rfidTimestamp: timestamp("rfid_timestamp", {
+        withTimezone: false,
+        mode: "date"
+    }),
+    controllerId: text("controller_id").notNull().references(() => chargingControllerTable.id, { onDelete: 'cascade' })
+});
+
+export const lastKnownStateTable = pgTable("last_known_state", {
+    id: serial("id").primaryKey(),
+    state: varchar("state", { length: 20 }),
+    controllerId: text("controller_id").notNull().references(() => chargingControllerTable.id, { onDelete: 'cascade' })
+});
+
+export const connectionStatusTable = pgTable("connection_status", {
+    id: serial("id").primaryKey(),
+    mqttStatus: boolean("mqtt_status").default(false),
+    restApiStatus: boolean("rest_api_status").default(false),
+    chargerId: integer("charger_id").notNull().references(() => chargerTable.id, { onDelete: 'cascade' })
+});
+
+export const companyTable = pgTable("company", {
+    id: serial("id").primaryKey(),
+    name: varchar("name", { length: 150 }).notNull(),
+    ic: varchar("ic", { length: 20 }).notNull(),
+    dic: varchar("dic", { length: 20 }),
+    city: varchar("city", { length: 200 }),
+    street: varchar("street", { length: 100 }),
+    zip: varchar("zip", { length: 20 }),
+    logo: text("logo"),
+    logoHeight: integer("logo_height"),
+    logoWidth: integer("logo_width")
+});
+
+export const companyRelations = relations(companyTable, ({ many }) => ({
+    usersToCompanies: many(usersToCompaniesTable),
+}));
 
 export const userTable = pgTable("user", {
     id: text("id").primaryKey(),
     email: varchar("email", { length: 75 }).notNull().unique(),
     password: text("password").notNull(),
-    isAdmin: boolean("is_admin").notNull().default(false),
-    createdAt: timestamp("created_at").notNull().defaultNow()
+    role: varchar("role", { length: 20 }).notNull().default("USER"),
+    createdAt: timestamp("created_at", {
+        withTimezone: false,
+        mode: "date"
+    }).notNull().default(sql`CURRENT_TIMESTAMP`)
 });
+
+export const usersRelations = relations(userTable, ({ many }) => ({
+    usersToCompanies: many(usersToCompaniesTable)
+}));
+
+
+export const usersToCompaniesTable = pgTable('users_to_companies', {
+    userId: text('user_id').notNull().references(() => userTable.id, { onDelete: 'cascade' }),
+    role: varchar("role", { length: 50 }),
+    rfidTag: text("rfid_tag"),
+    rfidValidTill: timestamp("rfid_valid_til", {
+        withTimezone: false,
+        mode: "date"
+    }),
+    companyId: integer('company_id').notNull().references(() => companyTable.id),
+}, (table) => {
+    return {
+        pk: primaryKey({ columns: [table.companyId, table.userId] })
+    }
+});
+
+// Many-to-many 
+export const usersToCompaniesRelations = relations(usersToCompaniesTable, ({ one }) => ({
+    group: one(companyTable, {
+        fields: [usersToCompaniesTable.companyId],
+        references: [companyTable.id],
+    }),
+    user: one(userTable, {
+        fields: [usersToCompaniesTable.userId],
+        references: [userTable.id],
+    }),
+}));
+
 
 // One to one relation with profileTable
 export const userRelations = relations(userTable, ({ one }) => ({
@@ -46,32 +140,46 @@ export const profileTable = pgTable("profile", {
     id: serial("id").primaryKey(),
     firstName: varchar("first_name", { length: 50 }),
     lastName: varchar("last_name", { length: 50 }),
-    userId: text("user_id").notNull().references(() => userTable.id)
+    userId: text("user_id").notNull().references(() => userTable.id, { onDelete: 'cascade' })
 });
 
 // Lucia authentication session table
 export const sessionTable = pgTable("session", {
     id: text("id").primaryKey(),
-
     userId: text("user_id")
         .notNull()
-        .references(() => userTable.id),
-
+        .references(() => userTable.id, { onDelete: 'cascade' }),
     expiresAt: timestamp("expires_at", {
-        withTimezone: true,
+        withTimezone: false,
         mode: "date"
     }).notNull()
 });
 
 export const passwordResetTable = pgTable("password_reset", {
     tokenHash: text("token_hash").primaryKey(),
-
     userId: text("user_id")
         .notNull()
-        .references(() => userTable.id),
-
+        .references(() => userTable.id, { onDelete: 'cascade' }),
     expiresAt: timestamp("expires_at", {
-        withTimezone: true,
+        withTimezone: false,
+        mode: "date"
+    }).notNull()
+});
+
+export const registerInvitationTable = pgTable("register_invitation", {
+    id: text("id").primaryKey(),
+    email: varchar("email", { length: 75 }).notNull().unique(),
+    firstName: varchar("first_name", { length: 50 }),
+    lastName: varchar("last_name", { length: 50 }),
+    companyId: integer("company_id").references(() => companyTable.id),
+    userId: text("user_id")
+        .references(() => userTable.id, { onDelete: 'cascade' }),
+    createdAt: timestamp("created_at", {
+        withTimezone: false,
+        mode: "date"
+    }).notNull().default(sql`CURRENT_TIMESTAMP`),
+    expiresAt: timestamp("expires_at", {
+        withTimezone: false,
         mode: "date"
     }).notNull()
 });
