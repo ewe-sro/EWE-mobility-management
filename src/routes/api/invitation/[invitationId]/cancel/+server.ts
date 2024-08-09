@@ -21,7 +21,7 @@ export const DELETE = async ({ locals, params, cookies }) => {
         .delete(registerInvitationTable)
         .where(eq(registerInvitationTable.id, params.invitationId));
 
-    setFlash({ type: 'error', message: "Pozvánka k registraci byla zrušena" }, cookies);
+    setFlash({ type: 'success', message: "Pozvánka k registraci byla zrušena" }, cookies);
 
     return json({ success: true });
 }

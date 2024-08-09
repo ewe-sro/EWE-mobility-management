@@ -7,18 +7,31 @@
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { Button } from '$lib/components/ui/button';
 
+	import ChargerStatus from '$lib/components/charging-status/charger-status.svelte';
+	import Subcard from '../subcard/subcard.svelte';
+
 	import { Ellipsis } from 'lucide-svelte';
 
 	import { updateFlash } from 'sveltekit-flash-message';
 
-	import ChargerStatus from '$lib/components/charging-status/charger-status.svelte';
-	import ChargerSubcard from './charger-subcard/charger-subcard.svelte';
+	import { getDateDifference } from '$lib/utils';
 
 	export let data;
 	export let user;
 
 	// Controls the delete dialog
 	let deleteDialogOpen = false;
+
+	// Get the status of the charger
+	let status;
+
+	if (!data.charger.lastConnected) {
+		status = 'unavailable';
+	} else if (getDateDifference(data.charger.lastConnected) > 3 * 60) {
+		status = 'offline';
+	} else {
+		status = 'online';
+	}
 
 	const dispatch = createEventDispatcher();
 
@@ -35,15 +48,15 @@
 </script>
 
 <Card.Root class="flex flex-col gap-8 w-full p-8">
-	<Card.Header class="flex flex-row justify-between items-start gap-4 p-0">
+	<Card.Header class="flex flex-row justify-between items-start gap-4 p-0 space-y-0">
 		<div class="flex flex-col items-start gap-1">
 			<Card.Title class="text-xl font-semibold">{data.charger.name}</Card.Title>
 			<Card.Description>{data.charger.description}</Card.Description>
 		</div>
 
 		<div class="flex items-center gap-2">
-			<ChargerStatus status={data.status} charger={data.charger} />
-			<DropdownMenu.Root>
+			<ChargerStatus {status} class="bg-muted" />
+			<DropdownMenu.Root preventScroll={false}>
 				<DropdownMenu.Trigger asChild let:builder>
 					<Button
 						variant="ghost"
@@ -77,15 +90,15 @@
 			</DropdownMenu.Root>
 		</div>
 	</Card.Header>
-	<Card.Content class="p-0 grid grid-cols-2 gap-4">
-		<ChargerSubcard>
-			<span slot="valueName">Počet nabíjecích bodů</span>
-			<span slot="value">{data.controllerCount}</span>
-		</ChargerSubcard>
-		<ChargerSubcard>
-			<span slot="valueName">K dispozici</span>
-			<span slot="value">{data.availableCount ?? 0}</span>
-		</ChargerSubcard>
+	<Card.Content class="p-0 grid grid-cols-2 gap-2">
+		<Subcard class="flex justify-between items-center">
+			<span class="text-sm text-muted-foreground font-medium">Počet nabíjecích bodů</span>
+			<span class="text-lg font-bold">{data.controllerCount}</span>
+		</Subcard>
+		<Subcard class="flex justify-between items-center">
+			<span class="text-sm text-muted-foreground font-medium">K dispozici</span>
+			<span class="text-lg font-bold">{data.availableCount ?? 0}</span>
+		</Subcard>
 	</Card.Content>
 </Card.Root>
 

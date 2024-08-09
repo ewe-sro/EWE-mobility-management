@@ -74,7 +74,7 @@ export const actions = {
         // Email options
         const options = {
             to: form.data.email,
-            subject: "[EEM] Obnova hesla",
+            subject: "[EMM] Obnova hesla",
             html: emailHtml,
             plainText: plainText
         }

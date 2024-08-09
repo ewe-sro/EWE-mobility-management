@@ -7,9 +7,19 @@ import { superValidate, message } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { chargerSchema } from "$lib/server/config/zodSchemas";
 
-import { eq, or, and, ne } from 'drizzle-orm';
+import { eq, and, or, desc } from 'drizzle-orm';
 import { db } from "$lib/server/db";
-import { chargerTable, companyTable, usersToCompaniesTable, chargingControllerTable, lastKnownStateTable, connectionStatusTable } from "$lib/server/db/schema";
+import {
+    chargerTable,
+    companyTable,
+    usersToCompaniesTable,
+    chargingControllerTable,
+    controllerDataTable,
+    chargingSessionTable,
+    userTable,
+    profileTable,
+    rfidTagTable
+} from "$lib/server/db/schema";
 
 export const load = async ({ locals, params, cookies }) => {
     const user = locals.user;
@@ -20,12 +30,10 @@ export const load = async ({ locals, params, cookies }) => {
     const [charger] = await db
         .select({
             charger: chargerTable,
-            company: companyTable,
-            status: connectionStatusTable
+            company: companyTable
         })
         .from(chargerTable)
         .leftJoin(companyTable, eq(chargerTable.companyId, companyTable.id))
-        .leftJoin(connectionStatusTable, eq(chargerTable.id, connectionStatusTable.chargerId))
         .where(eq(chargerTable.id, Number(params.chargerId)));
 
     const [chargerPermission] = await db
@@ -54,18 +62,105 @@ export const load = async ({ locals, params, cookies }) => {
         .select({
             charger: chargerTable,
             controller: chargingControllerTable,
-            state: lastKnownStateTable.state
+            controllerData: controllerDataTable
         })
         .from(chargingControllerTable)
         .leftJoin(chargerTable, eq(chargingControllerTable.chargerId, chargerTable.id))
-        .leftJoin(lastKnownStateTable, eq(chargingControllerTable.id, lastKnownStateTable.controllerId))
+        .leftJoin(controllerDataTable, eq(chargingControllerTable.id, controllerDataTable.controllerId))
         .where(eq(chargingControllerTable.chargerId, charger.charger.id));
+
+
+    // Subquery for getting the employee with the RFID of the charging session
+    const sqRfidEmployee = db
+        .select({
+            chargingSessionId: chargingSessionTable.id,
+            employee: {
+                email: userTable.email,
+                firstName: profileTable.firstName,
+                lastName: profileTable.lastName
+            }
+        })
+        .from(chargingSessionTable)
+        .leftJoin(chargingControllerTable, eq(chargingSessionTable.controllerId, chargingControllerTable.id))
+        .leftJoin(chargerTable, eq(chargingControllerTable.chargerId, chargerTable.id))
+        .leftJoin(usersToCompaniesTable, eq(chargerTable.companyId, usersToCompaniesTable.companyId))
+        .leftJoin(userTable, eq(usersToCompaniesTable.userId, userTable.id))
+        .leftJoin(profileTable, eq(userTable.id, profileTable.userId))
+        .where(eq(chargingSessionTable.rfidTag, usersToCompaniesTable.rfidTag))
+        .as("sqRfidEmployee");
+
+    // Subquery for getting the employee with the RFID of the charging session
+    const sqRfid = db
+        .select({
+            chargingSessionId: chargingSessionTable.id,
+            description: rfidTagTable.description
+        })
+        .from(chargingSessionTable)
+        .leftJoin(chargingControllerTable, eq(chargingSessionTable.controllerId, chargingControllerTable.id))
+        .leftJoin(chargerTable, eq(chargingControllerTable.chargerId, chargerTable.id))
+        .leftJoin(rfidTagTable, eq(chargerTable.companyId, rfidTagTable.companyId))
+        .where(eq(chargingSessionTable.rfidTag, rfidTagTable.tag))
+        .as("sqRfid");
+
+    const [userInCompany] = await db
+        .select()
+        .from(usersToCompaniesTable)
+        .where(
+            and(
+                eq(usersToCompaniesTable.companyId, Number(charger.charger.companyId)),
+                eq(usersToCompaniesTable.userId, user.id)
+            )
+        );
+
+
+    let chargingSessions;
+
+    if (!userInCompany || userInCompany.role !== "Host") {
+        chargingSessions = await db
+            .select({
+                chargingSession: chargingSessionTable,
+                controller: chargingControllerTable,
+                charger: chargerTable,
+                employee: sqRfidEmployee.employee,
+                rfidDescription: sqRfid.description
+            })
+            .from(chargingSessionTable)
+            .leftJoin(chargingControllerTable, eq(chargingSessionTable.controllerId, chargingControllerTable.id))
+            .leftJoin(chargerTable, eq(chargingControllerTable.chargerId, chargerTable.id))
+            .leftJoin(sqRfidEmployee, eq(chargingSessionTable.id, sqRfidEmployee.chargingSessionId))
+            .leftJoin(sqRfid, eq(chargingSessionTable.id, sqRfid.chargingSessionId))
+            .where(eq(chargerTable.id, Number(params.chargerId)))
+            .orderBy(desc(chargingSessionTable.startTimestamp));
+    } else {
+        chargingSessions = await db
+            .select({
+                chargingSession: chargingSessionTable,
+                controller: chargingControllerTable,
+                charger: chargerTable,
+                employee: sqRfidEmployee.employee,
+                rfidDescription: sqRfid.description
+            })
+            .from(chargingSessionTable)
+            .leftJoin(chargingControllerTable, eq(chargingSessionTable.controllerId, chargingControllerTable.id))
+            .leftJoin(chargerTable, eq(chargingControllerTable.chargerId, chargerTable.id))
+            .leftJoin(sqRfidEmployee, eq(chargingSessionTable.id, sqRfidEmployee.chargingSessionId))
+            .leftJoin(sqRfid, eq(chargingSessionTable.id, sqRfid.chargingSessionId))
+            .where(
+                and(
+                    eq(chargerTable.id, Number(params.chargerId)),
+                    eq(chargingSessionTable.rfidTag, userInCompany.rfidTag)
+                )
+            )
+            .orderBy(desc(chargingSessionTable.startTimestamp));
+    }
 
     return {
         charger: charger,
         chargingControllers: chargingControllers,
+        chargingSessions: chargingSessions,
         companies: companies,
-        form: form
+        form: form,
+        user: user
     }
 }
 
@@ -87,34 +182,13 @@ export const actions = {
             return fail(400, { form });
         }
 
-        // Check if charger with submitted network settings is already in database
-        const chargerExists = await db
-            .select()
-            .from(chargerTable)
-            .where(
-                and(
-                    eq(chargerTable.ipAddress, form.data.ipAddress),
-                    eq(chargerTable.mqttPort, form.data.mqttPort),
-                    eq(chargerTable.restApiPort, form.data.restApiPort),
-                    ne(chargerTable.id, Number(params.chargerId))
-                )
-            );
-
-        if (chargerExists.length > 0) {
-            return message(form, "Nabíjecí stanice s těmito síťovými údaji již existuje");
-        }
-
         // Edit the charger
         await db
             .update(chargerTable)
             .set({
                 name: form.data.name,
                 description: form.data.description,
-                ipAddress: form.data.ipAddress,
-                mqttPort: form.data.mqttPort,
-                mqttUser: form.data.mqttUser,
-                mqttPassword: form.data.mqttPassword,
-                restApiPort: form.data.restApiPort
+                companyId: form.data.companyId
             })
             .where(eq(chargerTable.id, Number(params.chargerId)));
 

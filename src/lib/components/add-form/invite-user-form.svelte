@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { tick } from 'svelte';
-
 	import * as Dialog from '$lib/components/ui/dialog';
 	import * as Form from '$lib/components/ui/form';
 	import { Input } from '$lib/components/ui/input';
@@ -11,6 +9,7 @@
 
 	import CompanyCombobox from './misc/company-combobox.svelte';
 	import RoleSelect from './misc/role-select.svelte';
+	import SubmitLoader from './misc/submit-loader.svelte';
 
 	export let data: any;
 	export let dialogOpen: boolean;
@@ -19,7 +18,7 @@
 	import SuperDebug from 'sveltekit-superforms';
 
 	const form = superForm(data.form);
-	const { form: formData, message, enhance } = form;
+	const { form: formData, message, delayed, enhance } = form;
 
 	// Used for tracking state of the combobox
 	let comboboxOpen = false;
@@ -38,7 +37,6 @@
 		>
 	</Dialog.Trigger>
 	<Dialog.Content class="gap-8 overflow-y-auto max-h-[calc(100vh-4rem)]">
-		<!-- <SuperDebug data={$formData} /> -->
 		<Dialog.Header>
 			<Dialog.Title>Pozvat uživatele</Dialog.Title>
 			<Separator />
@@ -104,7 +102,7 @@
 			/>
 
 			{#if $formData.companyId}
-				<!-- <RoleSelect {form} bind:formData={$formData} /> -->
+				<RoleSelect {form} bind:formData={$formData} />
 			{/if}
 
 			{#if $message}
@@ -115,7 +113,7 @@
 			{/if}
 		</form>
 
-		<div>
+		<Dialog.Footer class="!flex-col">
 			<Separator class="mb-2" />
 			<div class="flex justify-end gap-1.5">
 				<Button
@@ -129,12 +127,14 @@
 				<Button
 					type="submit"
 					form="inviteUserForm"
+					disabled={$delayed}
 					class="flex items-center gap-1.5 h-auto px-2 py-1.5 bg-primary text-sm text-white font-medium rounded-md hover:bg-primary/90
             active:ring-2 active:ring-offset-0 active:ring-primary/30 active:border-primary/70
             focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
-					>Pokračovat</Button
 				>
+					<SubmitLoader delayed={$delayed} iconSize={16}>Pokračovat</SubmitLoader>
+				</Button>
 			</div>
-		</div>
+		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

@@ -1,26 +1,53 @@
-import { fail } from "@sveltejs/kit";
+import { fail, error } from "@sveltejs/kit";
+
 import { redirect, setFlash } from 'sveltekit-flash-message/server';
+
+import { generateId } from "lucia";
 
 import { superValidate, message } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
-import { companySchema, userSchema, chargerSchema, rfidSchema } from "$lib/server/config/zodSchemas";
+import { companySchema, userSchema, chargerSchema, employeeSchema, employeeRfidSchema, otherRfidSchema } from "$lib/server/config/zodSchemas";
 
-import { eq, count, sum, avg, and, desc } from 'drizzle-orm';
+import { eq, ne, count, sum, avg, and, or, desc } from 'drizzle-orm';
 import { db } from "$lib/server/db";
-import { companyTable, usersToCompaniesTable, chargerTable, chargingControllerTable, lastKnownStateTable, chargingSessionTable, userTable, profileTable } from "$lib/server/db/schema";
+import {
+    companyTable,
+    usersToCompaniesTable,
+    chargerTable,
+    chargingControllerTable,
+    chargingSessionTable,
+    userTable,
+    profileTable,
+    rfidTagTable,
+    controllerDataTable
+} from "$lib/server/db/schema";
 
 const companyEditSchema = companySchema.omit({
     logo: true,
 });
 
-const employeeSchema = userSchema.pick({
-    userId: true
-});
-
 export const load = async ({ locals, params, cookies }) => {
     const user = locals.user;
 
-    if (!user) redirect(303, "/login");
+    if (!user) redirect(303, "/login", { type: "error", message: "Pro přístup k této stránce se musíte přihlásit" }, cookies);
+
+    // Check if the logged in user has access
+    const [userInCompany] = await db
+        .select()
+        .from(usersToCompaniesTable)
+        .where(
+            and(
+                eq(usersToCompaniesTable.userId, user.id),
+                eq(usersToCompaniesTable.companyId, Number(params.companyId))
+            )
+        );
+
+    if (user.role !== "ADMIN") {
+        // If the logged in user is not an ADMIN and is not an employee of the company redirect to /companies
+        if (!userInCompany) {
+            redirect(303, "/companies", { type: "error", message: "Společnost nebyla nalezena" }, cookies);
+        }
+    }
 
     // Get the company record from database
     const [company] = await db
@@ -32,7 +59,8 @@ export const load = async ({ locals, params, cookies }) => {
     const companyForm = await superValidate(company, zod(companyEditSchema));
     const employeeForm = await superValidate(zod(employeeSchema));
     const chargerForm = await superValidate(zod(chargerSchema));
-    const rfidForm = await superValidate(zod(rfidSchema));
+    const employeeRfidForm = await superValidate(zod(employeeRfidSchema));
+    const otherRfidForm = await superValidate(zod(otherRfidSchema));
 
     const [companyPermission] = await db
         .select()
@@ -61,30 +89,50 @@ export const load = async ({ locals, params, cookies }) => {
     // Get the number of chargers the company has
     const [availableCount] = await db
         .select({
-            availableCount: count(lastKnownStateTable.id)
+            availableCount: count(controllerDataTable.id)
         })
-        .from(lastKnownStateTable)
-        .leftJoin(chargingControllerTable, eq(lastKnownStateTable.controllerId, chargingControllerTable.id))
+        .from(controllerDataTable)
+        .leftJoin(chargingControllerTable, eq(controllerDataTable.controllerId, chargingControllerTable.id))
         .leftJoin(chargerTable, eq(chargingControllerTable.chargerId, chargerTable.id))
         .where(
             and(
                 eq(chargerTable.companyId, company.id),
-                eq(lastKnownStateTable.state, "disconnected")
+                eq(controllerDataTable.connectedState, "disconnected")
             ));
 
     // Get last 10 charging sessions
-    const chargingSessions = await db
-        .select({
-            chargingSession: chargingSessionTable,
-            charger: chargerTable,
-            controller: chargingControllerTable
-        })
-        .from(chargingSessionTable)
-        .leftJoin(chargingControllerTable, eq(chargingSessionTable.controllerId, chargingControllerTable.id))
-        .leftJoin(chargerTable, eq(chargingControllerTable.chargerId, chargerTable.id))
-        .where(eq(chargerTable.companyId, company.id))
-        .orderBy(desc(chargingSessionTable.startTimestamp))
-        .limit(10);
+    let chargingSessions;
+
+    if (userInCompany.role !== "Host") {
+        chargingSessions = await db
+            .select({
+                chargingSession: chargingSessionTable,
+                charger: chargerTable,
+                controller: chargingControllerTable
+            })
+            .from(chargingSessionTable)
+            .leftJoin(chargingControllerTable, eq(chargingSessionTable.controllerId, chargingControllerTable.id))
+            .leftJoin(chargerTable, eq(chargingControllerTable.chargerId, chargerTable.id))
+            .where(eq(chargerTable.companyId, company.id))
+            .orderBy(desc(chargingSessionTable.startTimestamp))
+            .limit(10);
+    } else {
+        chargingSessions = await db
+            .select({
+                chargingSession: chargingSessionTable,
+                charger: chargerTable,
+                controller: chargingControllerTable
+            })
+            .from(chargingSessionTable)
+            .leftJoin(chargingControllerTable, eq(chargingSessionTable.controllerId, chargingControllerTable.id))
+            .leftJoin(chargerTable, eq(chargingControllerTable.chargerId, chargerTable.id))
+            .where(and(
+                eq(chargerTable.companyId, company.id),
+                eq(chargingSessionTable.rfidTag, userInCompany.rfidTag)
+            ))
+            .orderBy(desc(chargingSessionTable.startTimestamp))
+            .limit(10);
+    }
 
     // Get charging stats
     const [chargingStats] = await db
@@ -142,14 +190,21 @@ export const load = async ({ locals, params, cookies }) => {
         })
         .from(companyTable);
 
+    // Get companies RFID tags
+    const rfidTags = await db
+        .select()
+        .from(rfidTagTable)
+        .where(eq(rfidTagTable.companyId, company.id));
 
     return {
         user: user,
+        userInCompany: userInCompany,
         users: users,
         company: company,
         companies: companies,
         employees: employees,
         chargers: chargers,
+        rfidTags: rfidTags,
         chargerCount: chargerCount.chargerCount,
         controllerCount: controllerCount.controllerCount,
         availableCount: availableCount.availableCount,
@@ -158,14 +213,15 @@ export const load = async ({ locals, params, cookies }) => {
         companyForm: companyForm,
         employeeForm: employeeForm,
         chargerForm: chargerForm,
-        rfidForm: rfidForm
+        employeeRfidForm: employeeRfidForm,
+        otherRfidForm: otherRfidForm
     };
 }
 
 export const actions = {
     companyForm: async ({ request, locals, params, cookies }) => {
         if (!locals.user) {
-            redirect(401, "/login", { type: "error", message: "Pro přístup k této stránce se musíte přihlásit" }, cookies);
+            redirect(303, "/login", { type: "error", message: "Pro přístup k této stránce se musíte přihlásit" }, cookies);
         }
 
         // get form data and validate them
@@ -192,9 +248,43 @@ export const actions = {
         return { form };
     },
 
+    chargerForm: async ({ request, locals, cookies }) => {
+        if (!locals.user) {
+            redirect(303, "/login", { type: "error", message: "Pro přístup k této stránce se musíte přihlásit" }, cookies);
+        }
+
+        if (locals.user.role !== "ADMIN") {
+            error(403, { message: "Nemáte oprávnění k této akci" });
+        }
+
+        // get form data and validate them
+        const form = await superValidate(request, zod(chargerSchema));
+
+        // If the submitted form is invalid
+        if (!form.valid) {
+            return fail(400, { form });
+        }
+
+        // generate API key
+        const apiKey = generateId(20);
+
+        // Add the charger to the database
+        await db
+            .insert(chargerTable)
+            .values({
+                name: form.data.name,
+                description: form.data.description,
+                companyId: form.data.companyId,
+                apiKey: apiKey
+            });
+
+        setFlash({ type: "success", message: "Nabíjecí stanice byla úspěšně přidána" }, cookies);
+        return message(form, apiKey);
+    },
+
     employeeForm: async ({ request, locals, params, cookies }) => {
         if (!locals.user) {
-            redirect(401, "/login", { type: "error", message: "Pro přístup k této stránce se musíte přihlásit" }, cookies);
+            redirect(303, "/login", { type: "error", message: "Pro přístup k této stránce se musíte přihlásit" }, cookies);
         }
 
         // get form data and validate them
@@ -224,27 +314,58 @@ export const actions = {
             .insert(usersToCompaniesTable)
             .values({
                 companyId: Number(params.companyId),
-                userId: form.data.userId
+                userId: form.data.userId,
+                role: form.data.role
             });
 
         setFlash({ type: "success", message: "Uživatel byl úspěšně přiřazen ke společnosti" }, cookies);
         return { form };
     },
 
-    rfidForm: async ({ request, locals, params, cookies }) => {
+    employeeRoleForm: async ({ request, locals, params, cookies }) => {
         if (!locals.user) {
-            redirect(401, "/login", { type: "error", message: "Pro přístup k této stránce se musíte přihlásit" }, cookies);
+            redirect(303, "/login", { type: "error", message: "Pro přístup k této stránce se musíte přihlásit" }, cookies);
         }
 
         // get form data and validate them
-        const form = await superValidate(request, zod(rfidSchema));
+        const form = await superValidate(request, zod(employeeSchema));
 
         // If the submitted form is invalid
         if (!form.valid) {
             return fail(400, { form });
         }
 
-        const [rfidExists] = await db
+        await db
+            .update(usersToCompaniesTable)
+            .set({
+                role: form.data.role
+            })
+            .where(
+                and(
+                    eq(usersToCompaniesTable.userId, form.data.userId),
+                    eq(usersToCompaniesTable.companyId, Number(params.companyId))
+                )
+            );
+
+
+        setFlash({ type: "success", message: "Role zaměstnance byla úspěšně změněna" }, cookies);
+        return { form };
+    },
+
+    employeeRfidForm: async ({ request, locals, params, cookies }) => {
+        if (!locals.user) {
+            redirect(303, "/login", { type: "error", message: "Pro přístup k této stránce se musíte přihlásit" }, cookies);
+        }
+
+        // get form data and validate them
+        const form = await superValidate(request, zod(employeeRfidSchema));
+
+        // If the submitted form is invalid
+        if (!form.valid) {
+            return fail(400, { form });
+        }
+
+        const [rfidExistsEmployee] = await db
             .select({
                 user: userTable
             })
@@ -258,22 +379,120 @@ export const actions = {
             )
 
         // Check if submitted user is already asociated with company
-        if (rfidExists) {
-            return message(form, `Zadané RFID je již přiřazeno k uživateli ${rfidExists.user?.email}`);
+        if (rfidExistsEmployee) {
+            return message(form, `Zadané RFID je již přiřazeno k uživateli ${rfidExistsEmployee.user?.email}`);
         }
 
-        console.log(form.data);
+        const [rfidExists] = await db
+            .select()
+            .from(rfidTagTable)
+            .where(
+                and(
+                    eq(rfidTagTable.companyId, Number(params.companyId)),
+                    eq(rfidTagTable.tag, form.data.rfidTag)
+                )
+            );
+
+        // Check if submitted user is already asociated with company
+        if (rfidExists) {
+            return message(form, `Zadané RFID je již k této společnosti přiřazeno`);
+        }
+
+        // If blank string was supplied set to null
+        let rfidTag = form.data.rfidTag === "" ? null : form.data.rfidTag;
 
         await db
             .update(usersToCompaniesTable)
             .set({
-                rfidTag: form.data.rfidTag,
+                rfidTag: rfidTag,
                 rfidValidTill: form.data.rfidValidTill
             })
-            .where(eq(usersToCompaniesTable.userId, form.data.userId));
+            .where(
+                and(
+                    eq(usersToCompaniesTable.userId, form.data.userId),
+                    eq(usersToCompaniesTable.companyId, Number(params.companyId))
+                )
+            );
 
 
         setFlash({ type: "success", message: "RFID bylo úspěšně přiřazeno k zaměstnanci" }, cookies);
         return { form };
-    }
+    },
+
+    otherRfidForm: async ({ request, locals, params, cookies }) => {
+        if (!locals.user) {
+            redirect(303, "/login", { type: "error", message: "Pro přístup k této stránce se musíte přihlásit" }, cookies);
+        }
+
+        // get form data and validate them
+        const form = await superValidate(request, zod(otherRfidSchema));
+
+        // If the submitted form is invalid
+        if (!form.valid) {
+            return fail(400, { form });
+        }
+
+        const [rfidExistsEmployee] = await db
+            .select({
+                user: userTable
+            })
+            .from(usersToCompaniesTable)
+            .leftJoin(userTable, eq(usersToCompaniesTable.userId, userTable.id))
+            .where(
+                and(
+                    eq(usersToCompaniesTable.companyId, Number(params.companyId)),
+                    eq(usersToCompaniesTable.rfidTag, form.data.rfidTag)
+                )
+            )
+
+        // Check if submitted user is already asociated with company
+        if (rfidExistsEmployee) {
+            return message(form, `Zadané RFID je již přiřazeno k uživateli ${rfidExistsEmployee.user?.email}`);
+        }
+
+        const [rfidExists] = await db
+            .select()
+            .from(rfidTagTable)
+            .where(
+                and(
+                    ne(rfidTagTable.id, Number(form.data.id)),
+                    eq(rfidTagTable.companyId, Number(params.companyId)),
+                    eq(rfidTagTable.tag, form.data.rfidTag)
+                )
+            );
+
+        // Check if submitted user is already asociated with company
+        if (rfidExists) {
+            return message(form, `Zadané RFID je již k této společnosti přidáno`);
+        }
+
+        let flashMessage;
+        if (form.data.id) {
+            await db
+                .update(rfidTagTable)
+                .set({
+                    tag: form.data.rfidTag,
+                    description: form.data.description,
+                    validTill: form.data.rfidValidTill
+                })
+                .where(eq(rfidTagTable.id, form.data.id));
+
+            flashMessage = "RFID bylo úspěšně upraveno";
+
+        } else {
+            await db
+                .insert(rfidTagTable)
+                .values({
+                    tag: form.data.rfidTag,
+                    description: form.data.description,
+                    validTill: form.data.rfidValidTill,
+                    companyId: Number(params.companyId)
+                });
+
+            flashMessage = "RFID bylo úspěšně přidáno";
+        }
+
+        setFlash({ type: "success", message: flashMessage }, cookies);
+        return { form };
+    },
 };

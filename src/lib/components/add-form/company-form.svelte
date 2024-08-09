@@ -8,6 +8,7 @@
 	import { TriangleAlert, Trash2 } from 'lucide-svelte';
 
 	import AddFormButton from './add-form-button.svelte';
+	import SubmitLoader from './misc/submit-loader.svelte';
 
 	import { superForm } from 'sveltekit-superforms';
 	import SuperDebug from 'sveltekit-superforms';
@@ -16,7 +17,7 @@
 	export let dialogOpen: boolean;
 
 	const form = superForm(data.form);
-	const { form: formData, message, enhance } = form;
+	const { form: formData, message, delayed, enhance } = form;
 
 	// Used for resetting the logo file upload after submit/dialog close
 	const resetLogoUpload = () => {
@@ -73,7 +74,7 @@
 		</Dialog.Header>
 
 		<form
-			id="addChargerForm"
+			id="companyForm"
 			class="flex flex-col gap-6"
 			method="POST"
 			enctype="multipart/form-data"
@@ -209,7 +210,7 @@
 			{/if}
 		</form>
 
-		<div>
+		<Dialog.Footer class="!flex-col">
 			<Separator class="mb-2" />
 			<div class="flex justify-end gap-1.5">
 				<Button
@@ -222,13 +223,14 @@
 				>
 				<Button
 					type="submit"
-					form="addChargerForm"
+					form="companyForm"
 					class="flex items-center gap-1.5 h-auto px-2 py-1.5 bg-primary text-sm text-white font-medium rounded-md hover:bg-primary/90
             active:ring-2 active:ring-offset-0 active:ring-primary/30 active:border-primary/70
             focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
-					>Pokračovat</Button
 				>
+					<SubmitLoader delayed={$delayed} iconSize={16}>Pokračovat</SubmitLoader>
+				</Button>
 			</div>
-		</div>
+		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

@@ -5,9 +5,9 @@ import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { userSchema } from "$lib/server/config/zodSchemas";
 
-import { eq } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { db } from "$lib/server/db";
-import { userTable, profileTable, companyTable, usersToCompaniesTable } from "$lib/server/db/schema";
+import { userTable, profileTable, companyTable, usersToCompaniesTable, chargingSessionTable, chargingControllerTable, chargerTable } from "$lib/server/db/schema";
 
 const userAccountSchema = userSchema.pick({
     firstName: true,
@@ -43,10 +43,30 @@ export const load = (async ({ locals, params, cookies }) => {
         .leftJoin(usersToCompaniesTable, eq(companyTable.id, usersToCompaniesTable.companyId))
         .where(eq(usersToCompaniesTable.userId, params.userId));
 
+    const chargingSessions = await db
+        .select({
+            chargingSession: chargingSessionTable,
+            controller: chargingControllerTable,
+            charger: chargerTable
+        })
+        .from(chargingSessionTable)
+        .leftJoin(chargingControllerTable, eq(chargingSessionTable.controllerId, chargingControllerTable.id))
+        .leftJoin(chargerTable, eq(chargingControllerTable.chargerId, chargerTable.id))
+        .leftJoin(companyTable, eq(chargerTable.companyId, companyTable.id))
+        .leftJoin(usersToCompaniesTable, eq(companyTable.id, usersToCompaniesTable.companyId))
+        .where(
+            and(
+                eq(usersToCompaniesTable.userId, user.id),
+                eq(usersToCompaniesTable.rfidTag, chargingSessionTable.rfidTag)
+            )
+        )
+        .orderBy(desc(chargingSessionTable.startTimestamp));
+
     return {
         form: form,
         user: user,
         loggedUser: locals.user,
-        companies: companies
+        companies: companies,
+        chargingSessions: chargingSessions
     };
 });

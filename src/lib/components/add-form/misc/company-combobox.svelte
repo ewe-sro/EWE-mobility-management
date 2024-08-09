@@ -14,6 +14,9 @@
 	export let comboboxOpen: boolean;
 	export let label = true;
 
+	let className: undefined | string = undefined;
+	export { className as class };
+
 	$: selectedCompany = companies.find((f: any) => f.company.id === formData.companyId);
 
 	// We want to refocus the trigger button when the user selects
@@ -49,12 +52,21 @@
 			</Popover.Trigger>
 			<input hidden value={formData.companyId} name={attrs.name} />
 		</Form.Control>
-		<Popover.Content class="w-[calc(100%-3rem)] mt-1 p-0" align="center" side="bottom">
+		<Popover.Content class="w-[calc(100%-3rem)] mt-1 p-0 {className}" align="center" side="bottom">
 			<Command.Root>
 				<Command.Input placeholder="Najít společnost" />
 				<Command.List>
 					<Command.Empty class="py-3">Žádné výsledky nenalezeny.</Command.Empty>
 					<Command.Group>
+						<Command.Item
+							class="cursor-pointer"
+							onSelect={() => {
+								formData.companyId = null;
+								closeAndFocusTrigger(ids.trigger);
+							}}
+						>
+							<span aria-hidden="true" class="text-transparent">blank</span>
+						</Command.Item>
 						{#each companies as company}
 							<Command.Item
 								class="cursor-pointer"

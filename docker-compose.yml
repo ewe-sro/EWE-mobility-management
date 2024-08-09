@@ -1,10 +1,9 @@
 services:
   app:
+    restart: on-failure
     build:
       context: ./
       dockerfile: Dockerfile
-    depends_on:
-      - python
     environment:
       - ORIGIN=https://app.ewe.cz
     extra_hosts:
@@ -19,26 +18,12 @@ services:
       - 443:443
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./nginx/certbot/conf:/etc/letsencrypt
-      - ./nginx/certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
 
   certbot:
     image: certbot/certbot
     volumes:
-      - ./nginx/certbot/conf:/etc/letsencrypt
-      - ./nginx/certbot/www:/var/www/certbot
-    command: certonly --webroot -w /var/www/certbot --force-renewal --email senohrabeko@ewe.cz -d app.ewe.cz --agree-tos
-
-  python:
-    build:
-      context: ./python
-      dockerfile: Dockerfile
-    environment:
-      - APP_ENV=production
-      - PROD_DB_HOST=${PROD_DB_HOST}
-      - PROD_DB_PORT=${PROD_DB_PORT}
-      - PROD_DB_USER=${PROD_DB_USER}
-      - PROD_DB_PASSWORD=${PROD_DB_PASSWORD}
-      - PROD_DB_NAME=${PROD_DB_NAME}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    command: certonly --webroot -w /var/www/certbot --email senohrabeko@ewe.cz -d app.ewe.cz --agree-tos --non-interactive

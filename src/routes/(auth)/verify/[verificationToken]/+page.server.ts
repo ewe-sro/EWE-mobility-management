@@ -20,7 +20,7 @@ const registerFormSchema = registerSchema.refine((data) => data.password === dat
 });
 
 
-export const load = (async ({ params, cookies }) => {
+export const load = async ({ params, cookies }) => {
     const [invitedUser] = await db
         .select({
             invitation: registerInvitationTable,
@@ -46,7 +46,7 @@ export const load = (async ({ params, cookies }) => {
         form: form,
         invitedUser: invitedUser
     };
-});
+};
 
 
 export const actions = {

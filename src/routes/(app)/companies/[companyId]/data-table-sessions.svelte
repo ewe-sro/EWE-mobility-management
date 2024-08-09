@@ -6,7 +6,7 @@
 
 	import * as Table from '$lib/components/ui/table';
 
-	import DataTableSort from '$lib/components/data-table/data-table-sort.svelte';
+	import DataTableSort from '$lib/components/data-table/controls/data-table-sort.svelte';
 	import StatusDot from '$lib/components/charging-status/status-dot/status-dot.svelte';
 
 	import { convertEnergyPower, convertTimestampToDate, convertSecondstoTime } from '$lib/utils';

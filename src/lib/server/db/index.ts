@@ -16,6 +16,7 @@ import {
 } from '$env/static/private';
 
 let connectionString;
+
 if (NODE_ENV === "production") {
     connectionString = `postgres://${PROD_DB_USER}:${PROD_DB_PASSWORD}@${PROD_DB_HOST}:${PROD_DB_PORT}/${PROD_DB_NAME}`;
 } else {

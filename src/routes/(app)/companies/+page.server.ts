@@ -9,19 +9,19 @@ import { superValidate, withFiles, message } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { companySchema } from "$lib/server/config/zodSchemas";
 
-import { count, sum, eq, isNotNull, and, asc, gte, sql } from 'drizzle-orm';
+import { count, sum, eq, and, gte, sql, lt } from 'drizzle-orm';
 import { db } from "$lib/server/db";
-import { companyTable, chargerTable, chargingControllerTable, lastKnownStateTable, usersToCompaniesTable, chargingSessionTable } from "$lib/server/db/schema";
+import { companyTable, chargerTable, chargingControllerTable, usersToCompaniesTable, chargingSessionTable, controllerDataTable } from "$lib/server/db/schema";
 
 import { generateId } from 'lucia';
 
 export const load = async ({ locals, cookies }) => {
     if (!locals.user) {
-        redirect(401, "/login", { type: "error", message: "Pro přístup k této stránce se musíte přihlásit" }, cookies);
+        redirect(303, "/login", { type: "error", message: "Pro přístup k této stránce se musíte přihlásit" }, cookies);
     }
 
     // Subquery for getting number of charging controllers
-    const sqController = await db
+    const sqController = db
         .select({
             chargerId: chargerTable.id,
             controllerCount: count(chargingControllerTable.id).as("controllerCount")
@@ -31,37 +31,46 @@ export const load = async ({ locals, cookies }) => {
         .groupBy(chargerTable.id)
         .as("sqController");
 
-    // Subquery for getting number of charging controllers
-    const sqAvailable = await db
+    // Subquery for getting number of disconnected charging controllers
+    const sqAvailable = db
         .select({
             chargerId: chargerTable.id,
-            availableCount: count(lastKnownStateTable.id).as("availableCount")
+            availableCount: count(controllerDataTable.id).as("availableCount")
         })
-        .from(lastKnownStateTable)
-        .leftJoin(chargingControllerTable, eq(chargingControllerTable.id, lastKnownStateTable.controllerId))
-        .leftJoin(chargerTable, eq(chargerTable.id, chargingControllerTable.chargerId))
-        .where(eq(lastKnownStateTable.state, "disconnected"))
+        .from(controllerDataTable)
+        .leftJoin(chargingControllerTable, eq(controllerDataTable.controllerId, chargingControllerTable.id))
+        .leftJoin(chargerTable, eq(chargingControllerTable.chargerId, chargerTable.id))
+        .where(eq(controllerDataTable.connectedState, "disconnected"))
         .groupBy(chargerTable.id)
         .as("sqAvailable");
 
+
     let companies;
-    if (locals.user?.role === "ADMIN") {
+    let employeeCount;
+
+    if (locals.user.role === "ADMIN") {
         // Get all companies if the logged in user is ADMIN
         companies = await db
             .select({
                 companyTable,
                 chargerCount: count(chargerTable.id),
                 controllerCount: sum(sqController.controllerCount),
-                availableCount: sum(sqAvailable.availableCount),
-                employeeCount: count(usersToCompaniesTable.companyId)
+                availableCount: sum(sqAvailable.availableCount)
             })
             .from(companyTable)
             .leftJoin(chargerTable, eq(companyTable.id, chargerTable.companyId))
-            .leftJoin(usersToCompaniesTable, eq(companyTable.id, usersToCompaniesTable.companyId))
             .leftJoin(sqController, eq(chargerTable.id, sqController.chargerId))
             .leftJoin(sqAvailable, eq(chargerTable.id, sqAvailable.chargerId))
             .groupBy(companyTable.id)
             .orderBy(companyTable.name);
+
+        employeeCount = await db
+            .select({
+                companyId: usersToCompaniesTable.companyId,
+                count: count(usersToCompaniesTable.userId)
+            })
+            .from(usersToCompaniesTable)
+            .groupBy(usersToCompaniesTable.companyId);
 
     } else {
         // Get companies that the logged in user is associated with
@@ -70,8 +79,7 @@ export const load = async ({ locals, cookies }) => {
                 companyTable,
                 chargerCount: count(chargerTable.id),
                 controllerCount: sum(sqController.controllerCount),
-                availableCount: sum(sqAvailable.availableCount),
-                employeeCount: count(usersToCompaniesTable.companyId)
+                availableCount: sum(sqAvailable.availableCount)
             })
             .from(companyTable)
             .leftJoin(chargerTable, eq(companyTable.id, chargerTable.companyId))
@@ -81,27 +89,35 @@ export const load = async ({ locals, cookies }) => {
             .where(eq(usersToCompaniesTable.userId, locals.user.id))
             .groupBy(companyTable.id)
             .orderBy(companyTable.name);
+
+        employeeCount = await db
+            .select({
+                companyId: usersToCompaniesTable.companyId,
+                count: count(usersToCompaniesTable.userId)
+            })
+            .from(usersToCompaniesTable)
+            .groupBy(usersToCompaniesTable.companyId)
+            .where(eq(usersToCompaniesTable.userId, locals.user.id));
     }
 
     // Create a dataset for graph
-    interface GraphData {
-        usedEnergy: string | null,
-        id: Date | null
+    interface ChargingSubdata {
+        "thisMonth": any,
+        "lastMonth": any,
+        "graph": any[]
     }
 
     interface ChargingData {
-        [companyId: number]: GraphData[]
+        [companyId: number]: ChargingSubdata
     }
 
     let chargingData: ChargingData = {};
 
     for (const company of companies) {
-
-        // Get all charging data where the company record is not null
-        const graphData = await db
+        // Get the sum of charging data of this and last 30 days
+        const [thisMonth] = await db
             .select({
-                usedEnergy: sum(chargingSessionTable.consumption),
-                id: chargingSessionTable.endTimestamp
+                chargingData: sum(chargingSessionTable.consumption)
             })
             .from(chargingSessionTable)
             .leftJoin(chargingControllerTable, eq(chargingSessionTable.controllerId, chargingControllerTable.id))
@@ -109,14 +125,76 @@ export const load = async ({ locals, cookies }) => {
             .where(
                 and(
                     eq(chargerTable.companyId, company.companyTable.id),
-                    isNotNull(chargingSessionTable.endRealPower),
                     gte(chargingSessionTable.endTimestamp, sql`CURRENT_DATE - INTERVAL '30 days'`)
                 )
-            )
-            .groupBy(chargingSessionTable.endTimestamp)
-            .orderBy(asc(chargingSessionTable.endTimestamp));
+            );
 
-        chargingData[company.companyTable.id] = graphData;
+        const [lastMonth] = await db
+            .select({
+                chargingData: sum(chargingSessionTable.consumption)
+            })
+            .from(chargingSessionTable)
+            .leftJoin(chargingControllerTable, eq(chargingSessionTable.controllerId, chargingControllerTable.id))
+            .leftJoin(chargerTable, eq(chargingControllerTable.chargerId, chargerTable.id))
+            .where(
+                and(
+                    eq(chargerTable.companyId, company.companyTable.id),
+                    gte(chargingSessionTable.endTimestamp, sql`CURRENT_DATE - INTERVAL '60 days'`),
+                    lt(chargingSessionTable.endTimestamp, sql`CURRENT_DATE - INTERVAL '30 days'`)
+                )
+            );
+
+        // Subquery for getting charging data for current company
+        const sq = sql`
+            SELECT
+                session.consumption as consumption,
+                session.end_timestamp as end_timestamp
+            FROM
+                ${chargingSessionTable} session
+            LEFT JOIN
+                ${chargingControllerTable} controller
+            ON
+                session.controller_id = controller.id
+            LEFT JOIN
+                ${chargerTable} charger
+            ON
+                controller.charger_id = charger.id
+            WHERE
+                charger.company_id = ${Number(company.companyTable.id)} AND
+                session.end_real_power IS NOT NULL AND
+                session.end_timestamp >= CURRENT_DATE - INTERVAL '30 days'`;
+
+        const query = sql`
+            WITH date_series AS (
+                SELECT generate_series(
+                  current_date - interval '30 days',
+                  current_date - interval '0 day',
+                  interval '1 day'
+              )::date AS id
+            )
+            SELECT 
+              ds.id,
+              COALESCE(SUM(session.consumption), 0) AS used_energy
+            FROM 
+              date_series ds
+            LEFT JOIN 
+              (${sq}) session
+            ON 
+              ds.id = session.end_timestamp::date
+            GROUP BY 
+              ds.id
+            ORDER BY 
+              ds.id;
+        `;
+
+        const graphData = await db
+            .execute(query);
+
+        chargingData[company.companyTable.id] = {
+            thisMonth: thisMonth.chargingData,
+            lastMonth: lastMonth.chargingData,
+            graph: graphData,
+        };
     }
 
     const form = await superValidate(zod(companySchema));
@@ -124,6 +202,7 @@ export const load = async ({ locals, cookies }) => {
     return {
         companies: companies,
         chargingData: chargingData,
+        employeeCount: employeeCount,
         user: locals.user,
         form: form
     };

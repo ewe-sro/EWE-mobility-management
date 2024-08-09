@@ -75,4 +75,5 @@
 			</Command.Root>
 		</Popover.Content>
 	</Popover.Root>
+	<Form.FieldErrors />
 </Form.Field>

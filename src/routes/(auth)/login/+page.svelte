@@ -1,21 +1,18 @@
 <script lang="ts">
-	import { navigating } from '$app/stores';
-
 	import * as Card from '$lib/components/ui/card';
 	import * as Form from '$lib/components/ui/form';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import { Separator } from '$lib/components/ui/separator';
 
-	import { TriangleAlert, Loader } from 'lucide-svelte';
+	import { TriangleAlert, Loader2 } from 'lucide-svelte';
 
 	import { superForm } from 'sveltekit-superforms';
 
 	export let data;
 
 	const form = superForm(data.form);
-
-	const { form: formData, message, enhance } = form;
+	const { form: formData, message, enhance, delayed } = form;
 </script>
 
 <Card.Header class="p-0 pb-8">
@@ -73,8 +70,8 @@
 		<Form.Button
 			class="w-full text-white focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
 		>
-			{#if $navigating}
-				<Loader class="animate-spin-slow" />
+			{#if $delayed}
+				<Loader2 class="animate-spin-slow" />
 			{:else}
 				Přihlásit se
 			{/if}

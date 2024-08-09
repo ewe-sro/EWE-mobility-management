@@ -11,11 +11,11 @@ export const chargerTable = pgTable("charger", {
     id: serial("id").primaryKey(),
     name: varchar("name", { length: 50 }).notNull(),
     description: text("description"),
-    ipAddress: varchar("ip_address", { length: 50 }),
-    mqttPort: integer("mqtt_port").default(1883),
-    mqttUser: varchar("mqtt_user", { length: 75 }),
-    mqttPassword: text("mqtt_password"),
-    restApiPort: integer("rest_api_port").default(5555),
+    apiKey: text("api_key"),
+    lastConnected: timestamp("last_connected", {
+        withTimezone: false,
+        mode: "date"
+    }),
     companyId: integer("company_id").references(() => companyTable.id, { onDelete: 'cascade' }),
     userId: text('user_id').references(() => userTable.id, { onDelete: 'set null' }),
 });
@@ -32,11 +32,32 @@ export const chargingControllerTable = pgTable("charging_controller", {
     chargerId: integer("charger_id").notNull().references(() => chargerTable.id, { onDelete: 'cascade' })
 });
 
+export const controllerDataTable = pgTable("controller_data", {
+    id: serial("id").primaryKey(),
+    connectedState: varchar("connected_state", { length: 20 }),
+    apparentEnergy: decimal("apparent_energy"),
+    energyRealPower: decimal("energy_real_power"),
+    frequency: decimal("frequency"),
+    partApparentEnergy: decimal("part_apparent_energy"),
+    partEnergyRealPower: decimal("part_energy_real_power"),
+    apparentPower: decimal("apparent_power"),
+    realPower: decimal("real_power"),
+    i1: decimal("i1"),
+    i2: decimal("i2"),
+    i3: decimal("i3"),
+    u1: decimal("u1"),
+    u2: decimal("u2"),
+    u3: decimal("u3"),
+    connectedTime: integer("connected_time"),
+    chargeTime: integer("charge_time"),
+    controllerId: text("controller_id").notNull().unique().references(() => chargingControllerTable.id, { onDelete: 'cascade' })
+});
+
 export const chargingSessionTable = pgTable("charging_session", {
     id: serial("id").primaryKey(),
     startRealPower: decimal("start_real_power"),
     endRealPower: decimal("end_real_power"),
-    consumption: decimal("consumption"),
+    consumption: decimal("consumption").$type<number>(),
     startTimestamp: timestamp("start_timestamp", {
         withTimezone: false,
         mode: "date"
@@ -54,19 +75,6 @@ export const chargingSessionTable = pgTable("charging_session", {
     controllerId: text("controller_id").notNull().references(() => chargingControllerTable.id, { onDelete: 'cascade' })
 });
 
-export const lastKnownStateTable = pgTable("last_known_state", {
-    id: serial("id").primaryKey(),
-    state: varchar("state", { length: 20 }),
-    controllerId: text("controller_id").notNull().references(() => chargingControllerTable.id, { onDelete: 'cascade' })
-});
-
-export const connectionStatusTable = pgTable("connection_status", {
-    id: serial("id").primaryKey(),
-    mqttStatus: boolean("mqtt_status").default(false),
-    restApiStatus: boolean("rest_api_status").default(false),
-    chargerId: integer("charger_id").notNull().references(() => chargerTable.id, { onDelete: 'cascade' })
-});
-
 export const companyTable = pgTable("company", {
     id: serial("id").primaryKey(),
     name: varchar("name", { length: 150 }).notNull(),
@@ -78,6 +86,17 @@ export const companyTable = pgTable("company", {
     logo: text("logo"),
     logoHeight: integer("logo_height"),
     logoWidth: integer("logo_width")
+});
+
+export const rfidTagTable = pgTable("rfid_tag", {
+    id: serial("id").primaryKey(),
+    tag: text("tag"),
+    validTill: timestamp("valid_till", {
+        withTimezone: false,
+        mode: "date"
+    }),
+    description: text("description"),
+    companyId: integer("company_id").references(() => companyTable.id)
 });
 
 export const companyRelations = relations(companyTable, ({ many }) => ({
@@ -92,7 +111,7 @@ export const userTable = pgTable("user", {
     createdAt: timestamp("created_at", {
         withTimezone: false,
         mode: "date"
-    }).notNull().default(sql`CURRENT_TIMESTAMP`)
+    }).notNull().default(sql`timezone('utc', now())`)
 });
 
 export const usersRelations = relations(userTable, ({ many }) => ({
@@ -177,7 +196,7 @@ export const registerInvitationTable = pgTable("register_invitation", {
     createdAt: timestamp("created_at", {
         withTimezone: false,
         mode: "date"
-    }).notNull().default(sql`CURRENT_TIMESTAMP`),
+    }).notNull().default(sql`timezone('utc', now())`),
     expiresAt: timestamp("expires_at", {
         withTimezone: false,
         mode: "date"

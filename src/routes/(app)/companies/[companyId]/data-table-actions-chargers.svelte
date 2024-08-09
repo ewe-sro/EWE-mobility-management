@@ -4,16 +4,24 @@
 
 	import { updateFlash } from 'sveltekit-flash-message';
 
-	import { Ellipsis } from 'lucide-svelte';
+	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import { Button } from '$lib/components/ui/button';
 
+	import ShowToAdminsAndManagers from '$lib/components/role-container/show-to-admins-and-managers.svelte';
+
+	import { Ellipsis } from 'lucide-svelte';
+
 	export let id: string;
+	export let user;
+	export let userInCompany;
+
+	let deleteDialogOpen = false;
 
 	const dispatch = createEventDispatcher();
 
 	const deleteCharger = async (id: string) => {
-		await fetch(`/api/invitation/cancel/${id}`, {
+		await fetch(`/api/charger/${id}/delete`, {
 			method: 'DELETE'
 		});
 
@@ -24,7 +32,7 @@
 	};
 </script>
 
-<DropdownMenu.Root>
+<DropdownMenu.Root preventScroll={false}>
 	<DropdownMenu.Trigger asChild let:builder>
 		<Button
 			variant="ghost"
@@ -41,15 +49,39 @@
 			<DropdownMenu.Item class="text-muted-foreground font-medium" href="/chargers/{id}"
 				>Detail nabíjecí stanice</DropdownMenu.Item
 			>
-			<DropdownMenu.Item class="text-muted-foreground font-medium" href="/chargers/{id}?action=edit"
-				>Upravit údaje</DropdownMenu.Item
-			>
-			<DropdownMenu.Item
-				on:click={() => deleteCharger(id)}
-				class="text-destructive font-medium hover:bg-red-100 hover:text-destructive"
-			>
-				Odstranit nabíjecí stanici
-			</DropdownMenu.Item>
+			<ShowToAdminsAndManagers {user} {userInCompany}>
+				<DropdownMenu.Item
+					class="text-muted-foreground font-medium"
+					href="/chargers/{id}?action=edit">Upravit údaje</DropdownMenu.Item
+				>
+				<DropdownMenu.Item
+					on:click={() => (deleteDialogOpen = true)}
+					class="text-destructive font-medium hover:bg-red-100 hover:text-destructive"
+				>
+					Odstranit nabíjecí stanici
+				</DropdownMenu.Item>
+			</ShowToAdminsAndManagers>
 		</DropdownMenu.Group>
 	</DropdownMenu.Content>
 </DropdownMenu.Root>
+
+<!-- DELETE DIALOG -->
+<AlertDialog.Root bind:open={deleteDialogOpen}>
+	<AlertDialog.Content>
+		<AlertDialog.Header>
+			<AlertDialog.Title>Jste jisti, že chcete smazat tuto nabíjecí stanici?</AlertDialog.Title>
+			<AlertDialog.Description>
+				Tuto akci nelze vzít zpět. Dojde k trvalému smazání všech dat spojených s nabíjecí stanicí
+				včetně všech nabíjecích bodů a nabíjecích dat.
+			</AlertDialog.Description>
+		</AlertDialog.Header>
+		<AlertDialog.Footer>
+			<AlertDialog.Cancel>Zrušit</AlertDialog.Cancel>
+			<AlertDialog.Action
+				on:click={() => deleteCharger(id)}
+				class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+				>Smazat</AlertDialog.Action
+			>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
+</AlertDialog.Root>

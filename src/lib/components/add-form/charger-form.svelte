@@ -1,36 +1,40 @@
 <script lang="ts">
-	import { tick } from 'svelte';
-
 	import * as Dialog from '$lib/components/ui/dialog';
-	import * as Command from '$lib/components/ui/command';
-	import * as Popover from '$lib/components/ui/popover';
 	import * as Form from '$lib/components/ui/form';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import { Separator } from '$lib/components/ui/separator';
 
-	import { TriangleAlert, Plus, ChevronsUpDown, Check } from 'lucide-svelte';
+	import { Plus } from 'lucide-svelte';
 
 	import CompanyCombobox from './misc/company-combobox.svelte';
 	import UserCombobox from './misc/user-combobox.svelte';
+	import ApiKey from './misc/api-key.svelte';
+	import SubmitLoader from './misc/submit-loader.svelte';
 
 	export let formObj: any;
 	export let companies: any;
 	export let users: any;
 	export let keyIcon: boolean;
 	export let dialogOpen: boolean;
+	export let selectedCompanyId: undefined | string = undefined;
 
-	import { superForm } from 'sveltekit-superforms';
+	import SuperDebug, { superForm } from 'sveltekit-superforms';
 
 	const form = superForm(formObj);
-	const { form: formData, message, enhance } = form;
+	const { form: formData, message, delayed, enhance } = form;
 
 	// Used for tracking state of the combobox
 	let companyComboboxOpen = false;
 	let userComboboxOpen = false;
+
+	// Open the dialog with POST form on ?customer param
+	$: if (selectedCompanyId && !$formData.companyId) {
+		$formData.companyId = Number(selectedCompanyId);
+	}
 </script>
 
-<Dialog.Root bind:open={dialogOpen}>
+<Dialog.Root bind:open={dialogOpen} onOpenChange={() => ($message = false)}>
 	<Dialog.Trigger
 		on:click={() => (dialogOpen = true)}
 		class="flex items-center gap-1.5 h-auto px-2 py-1.5 bg-primary text-sm text-white font-medium rounded-md hover:bg-primary/90
@@ -50,77 +54,21 @@
 			<Separator />
 		</Dialog.Header>
 
-		<form id="addChargerForm" class="flex flex-col gap-6" method="POST" use:enhance>
-			<!-- NAME -->
-			<Form.Field {form} name="name">
-				<Form.Control let:attrs>
-					<Form.Label>Název nabíjecí stanice</Form.Label>
-					<Input
-						{...attrs}
-						bind:value={$formData.name}
-						type="text"
-						autocomplete="off"
-						class="focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
-					/>
-				</Form.Control>
-				<Form.FieldErrors />
-			</Form.Field>
-
-			<!-- DESCRIPTION -->
-			<Form.Field {form} name="description">
-				<Form.Control let:attrs>
-					<Form.Label>Popis</Form.Label>
-					<Input
-						{...attrs}
-						bind:value={$formData.description}
-						type="text"
-						autocomplete="off"
-						class="focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
-					/>
-				</Form.Control>
-				<Form.FieldErrors />
-			</Form.Field>
-
-			<!-- IP ADDRESS -->
-			<Form.Field {form} name="ipAddress">
-				<Form.Control let:attrs>
-					<Form.Label>IP adresa</Form.Label>
-					<Input
-						{...attrs}
-						bind:value={$formData.ipAddress}
-						type="text"
-						autocomplete="off"
-						class="focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
-					/>
-				</Form.Control>
-				<Form.FieldErrors />
-			</Form.Field>
-
-			<!-- MQTT PORT -->
-			<Form.Field {form} name="mqttPort">
-				<Form.Control let:attrs>
-					<Form.Label>MQTT port</Form.Label>
-					<Input
-						{...attrs}
-						bind:value={$formData.mqttPort}
-						type="number"
-						min="1"
-						max="65535"
-						autocomplete="off"
-						class="focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
-					/>
-				</Form.Control>
-				<Form.FieldErrors />
-			</Form.Field>
-
-			<div class="flex gap-2">
-				<!-- MQTT USER -->
-				<Form.Field {form} name="mqttUser" class="flex-1">
+		{#if !$message}
+			<form
+				id="chargerForm"
+				method="POST"
+				action="?/chargerForm"
+				class="flex flex-col gap-6"
+				use:enhance
+			>
+				<!-- NAME -->
+				<Form.Field {form} name="name">
 					<Form.Control let:attrs>
-						<Form.Label>MQTT uživatel</Form.Label>
+						<Form.Label>Název nabíjecí stanice</Form.Label>
 						<Input
 							{...attrs}
-							bind:value={$formData.mqttUser}
+							bind:value={$formData.name}
 							type="text"
 							autocomplete="off"
 							class="focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
@@ -129,12 +77,13 @@
 					<Form.FieldErrors />
 				</Form.Field>
 
-				<Form.Field {form} name="mqttPassword" class="flex-1">
+				<!-- DESCRIPTION -->
+				<Form.Field {form} name="description">
 					<Form.Control let:attrs>
-						<Form.Label>MQTT heslo</Form.Label>
+						<Form.Label>Popis</Form.Label>
 						<Input
 							{...attrs}
-							bind:value={$formData.mqttPassword}
+							bind:value={$formData.description}
 							type="text"
 							autocomplete="off"
 							class="focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
@@ -142,42 +91,23 @@
 					</Form.Control>
 					<Form.FieldErrors />
 				</Form.Field>
-			</div>
 
-			<!-- REST API PORT -->
-			<Form.Field {form} name="restApiPort">
-				<Form.Control let:attrs>
-					<Form.Label>REST API port</Form.Label>
-					<Input
-						{...attrs}
-						bind:value={$formData.restApiPort}
-						type="number"
-						min="1"
-						max="65535"
-						autocomplete="off"
-						class="focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
-					/>
-				</Form.Control>
-				<Form.FieldErrors />
-			</Form.Field>
+				<CompanyCombobox
+					{form}
+					bind:formData={$formData}
+					{companies}
+					bind:comboboxOpen={companyComboboxOpen}
+				/>
+				<!-- <UserCombobox {form} bind:formData={$formData} {users} bind:comboboxOpen={userComboboxOpen} /> -->
+			</form>
+		{:else}
+			<ApiKey apiKey={$message}>
+				Nabíjecí stanice byla úspěšně přidána do systému. Pro dokončení nastavení vložte tento klíč
+				do konfiguračního souboru nabíjecí stanice.
+			</ApiKey>
+		{/if}
 
-			<CompanyCombobox
-				{form}
-				bind:formData={$formData}
-				{companies}
-				bind:comboboxOpen={companyComboboxOpen}
-			/>
-			<UserCombobox {form} bind:formData={$formData} {users} bind:comboboxOpen={userComboboxOpen} />
-
-			{#if $message}
-				<span class="inline-flex items-center gap-1 text-sm text-destructive font-medium">
-					<TriangleAlert size="16" />
-					{$message}
-				</span>
-			{/if}
-		</form>
-
-		<div>
+		<Dialog.Footer class="!flex-col">
 			<Separator class="mb-2" />
 			<div class="flex justify-end gap-1.5">
 				<Button
@@ -188,15 +118,26 @@
             focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-accent/30 focus-visible:border-accent/70"
 					>Zrušit</Button
 				>
-				<Button
-					type="submit"
-					form="addChargerForm"
-					class="flex items-center gap-1.5 h-auto px-2 py-1.5 bg-primary text-sm text-white font-medium rounded-md hover:bg-primary/90
+				{#if !$message}
+					<Button
+						type="submit"
+						form="chargerForm"
+						class="flex items-center gap-1.5 h-auto px-2 py-1.5 bg-primary text-sm text-white font-medium rounded-md hover:bg-primary/90
             active:ring-2 active:ring-offset-0 active:ring-primary/30 active:border-primary/70
             focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
-					>Pokračovat</Button
-				>
+					>
+						<SubmitLoader delayed={$delayed} iconSize={16}>Pokračovat</SubmitLoader>
+					</Button>
+				{:else}
+					<Button
+						on:click={() => (dialogOpen = false)}
+						class="flex items-center gap-1.5 h-auto px-2 py-1.5 bg-primary text-sm text-white font-medium rounded-md hover:bg-primary/90
+		active:ring-2 active:ring-offset-0 active:ring-primary/30 active:border-primary/70
+		focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
+						>Pokračovat</Button
+					>
+				{/if}
 			</div>
-		</div>
+		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

@@ -1,52 +1,55 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { Button } from '../ui/button';
 
-	import { Button } from '$lib/components/ui/button/';
+	import { Home, PlugZap, Shield, Factory } from 'lucide-svelte';
 
-	import { Cog, Home, PlugZap, Shield, Factory } from 'lucide-svelte';
-
+	import SidebarLogo from './sidebar-logo/sidebar-logo.svelte';
 	import SidebarLink from './sidebar-link/sidebar-link.svelte';
+	import SidebarUser from './sidebar-user/sidebar-user.svelte';
+	import SidebarDarkmodeSwitch from './sidebar-darkmode-switch/sidebar-darkmode-switch.svelte';
 
 	export let user: any;
+	export let profile: any;
 </script>
 
-<div
-	class="sticky top-[73px] flex flex-col justify-between h-[calc(100vh-73px)] w-full max-w-[18rem] p-4 pb-8 bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-700"
->
-	<nav>
-		<ul class="flex flex-col gap-2">
-			<!-- DASHBOARD -->
-			<SidebarLink href="/dashboard">
-				<Home size="20" strokeWidth="2.25" />
-				<span class="text-base">Dashboard</span>
-			</SidebarLink>
-			<!-- CHARGERS -->
-			<SidebarLink href="/chargers">
-				<PlugZap size="24" strokeWidth="2.25" />
-				<span class="text-base">Nabíjecí stanice</span>
-			</SidebarLink>
-			<!-- COMPANIES -->
-			<SidebarLink href="/companies">
-				<Factory size="24" strokeWidth="2.25" />
-				<span class="text-base">Společnosti</span>
-			</SidebarLink>
-		</ul>
-	</nav>
+<div class="flex-shrink-0 sticky top-0 flex flex-col justify-between h-screen w-full max-w-xs p-4">
+	<div
+		class="flex flex-col justify-between h-full pt-6 pb-4 px-4 bg-white dark:bg-slate-950 border border-border rounded-md shadow-sm"
+	>
+		<div class="flex flex-col gap-12">
+			<SidebarLogo />
 
-	<nav>
-		<ul class="flex flex-col gap-2">
-			<!-- SETTINGS -->
-			<SidebarLink href="/settings">
-				<Cog size="24" strokeWidth="2.25" />
-				<span class="text-base">Nastavení</span>
-			</SidebarLink>
-			{#if user.role == 'ADMIN'}
-				<!-- ADMIN PANEL -->
-				<SidebarLink href="/admin">
-					<Shield size="24" strokeWidth="2.25" />
-					<span class="text-base">Nástroje správce</span>
-				</SidebarLink>
-			{/if}
-		</ul>
-	</nav>
+			<nav>
+				<ul class="flex flex-col gap-2">
+					<!-- DASHBOARD -->
+					<SidebarLink href="/dashboard">
+						<Home size="20" strokeWidth="2.25" />
+						<span class="text-base leading-none">Dashboard</span>
+					</SidebarLink>
+					<!-- CHARGERS -->
+					<SidebarLink href="/chargers">
+						<PlugZap size="20" strokeWidth="2.25" />
+						<span class="text-base leading-none">Nabíjecí stanice</span>
+					</SidebarLink>
+					<!-- COMPANIES -->
+					<SidebarLink href="/companies">
+						<Factory size="20" strokeWidth="2.25" />
+						<span class="text-base leading-none">Společnosti</span>
+					</SidebarLink>
+					{#if user.role == 'ADMIN'}
+						<!-- ADMIN PANEL -->
+						<SidebarLink href="/manage">
+							<Shield size="20" strokeWidth="2.25" />
+							<span class="text-base leading-none">Nástroje správce</span>
+						</SidebarLink>
+					{/if}
+				</ul>
+			</nav>
+		</div>
+
+		<div class="flex flex-col gap-4">
+			<SidebarUser {user} {profile} />
+			<SidebarDarkmodeSwitch />
+		</div>
+	</div>
 </div>

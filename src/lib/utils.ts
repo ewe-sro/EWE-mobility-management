@@ -61,19 +61,29 @@ export const flyAndScale = (
     };
 };
 
+const getTimezoneOffset = () => {
+    const today = new Date();
+    const offsetMinutes = today.getTimezoneOffset();
+    const offsetHours = -offsetMinutes / 60;
+
+    return offsetHours;
+}
+
 export const convertTimestampToDate = (timestamp: string | any, type: "datetime" | "date") => {
-    if (timestamp === null || undefined) {
+    if (timestamp === null || timestamp === undefined) {
         return " ";
     }
 
     // Create a Date object from the timestamp
     const date = new Date(timestamp);
 
+    const timezoneOffset = getTimezoneOffset();
+
     // Extract date components
     const year = date.getFullYear();
     const month = date.getMonth() + 1; // Months are zero-indexed, so add 1
     const day = date.getDate();
-    const hour = date.getUTCHours();
+    const hour = date.getUTCHours() + timezoneOffset;
     const minutes = date.getMinutes();
 
     // Construct the date string in desired format
@@ -86,6 +96,23 @@ export const convertTimestampToDate = (timestamp: string | any, type: "datetime"
     }
 
     return formattedDate;
+}
+
+export const getDateDifference = (timestamp: string | any) => {
+    const now = new Date();
+    const date = new Date(timestamp);
+
+    const differenceInMilliseconds = now.getTime() - date.getTime();
+
+    return Math.floor(differenceInMilliseconds / 1000);
+}
+
+export const getSessionDuration = (startTimestamp: Date | null, endTimestamp: Date | null) => {
+    if (!startTimestamp || !endTimestamp) return null;
+
+    const differenceInMilliseconds = endTimestamp.getTime() - startTimestamp.getTime();
+
+    return Math.floor(differenceInMilliseconds / 1000);
 }
 
 export const convertTokW = (value: number | null, unit: string) => {
@@ -146,13 +173,11 @@ export const convertEnergyPower = (value: number, unit: "Wh" | "W") => {
     let realPowerCalc;
     let realPowerWh;
 
-    value = String(value) === "NaN" ? 0 : value;
-
     if (value <= 1000) {
-        realPowerCalc = value.toFixed(1);
+        realPowerCalc = round(value, 1);
         realPowerWh = `${realPowerCalc} ${unit}`;
     } else {
-        realPowerCalc = (value / 1000).toFixed(2);
+        realPowerCalc = round(value / 1000, 2);
         realPowerWh = `${realPowerCalc} k${unit}`;
     }
 
@@ -171,3 +196,77 @@ export const getTodaysDate = () => {
 
     return { year, month, day, hours, minutes };
 }
+
+export const round = (value: number, decimals: number) => {
+    const multiplier = Math.pow(10, decimals || 0);
+    return Math.round(value * multiplier) / multiplier;
+}
+
+export const exportCsv = (data: any) => {
+    const BOM = '\uFEFF'; // BOM character for correct character encoding
+    const blob = new Blob([BOM + data], { type: 'text/csv;charset=utf-8;' });
+
+    // Create a hidden link used for downloading the CSV
+    const hiddenElement = document.createElement('a');
+
+    // Create a URL for the Blob and set it as the href attribute
+    const url = URL.createObjectURL(blob);
+    hiddenElement.href = url;
+
+    const { year, month, day, hours, minutes } = getTodaysDate();
+    hiddenElement.download = `charging_data_export_${day}${month}${year}-${hours}${minutes}.csv`;
+
+    hiddenElement.click();
+    hiddenElement.remove();
+
+    // Revoke the object URL after the download is triggered
+    URL.revokeObjectURL(url);
+};
+
+export const getChargerStatus = (lastConnected: string | any): string | "unavailable" | "offline" | "online" => {
+    let status;
+
+    if (!lastConnected) {
+        status = 'unavailable';
+    } else if (getDateDifference(lastConnected) > 3 * 60) {
+        status = 'offline';
+    } else {
+        status = 'online';
+    }
+
+    return status;
+}
+
+export const isEmptyNullOrUndefined = (value: any) => {
+    return value === "" || value === null || value === undefined ? true : false;
+}
+
+// Check if a date is between two dates
+export const isBetweenDates = (startTimestamp: Date, endTimestamp: Date, targetTimestamp: Date): boolean => {
+    return targetTimestamp >= startTimestamp && targetTimestamp <= endTimestamp;
+}
+
+// convert an Array of data
+export const getCsvFromData = (data: any[]) => {
+    // Get the keys from the first object to use as the header
+    const headers = Object.keys(data[0]);
+
+    // Map the data to an array of CSV rows
+    const csvRows = data.map((row) => {
+        // Map the row values to an array of values
+        const rowValues = headers.map((header) => {
+            const value = row[header];
+            // Convert values to strings
+            if (typeof value === 'object' && value !== null) {
+                return value.toISOString();
+            } else {
+                return value !== null ? value.toString() : '';
+            }
+        });
+        return rowValues.join(',');
+    });
+
+    // Join the header row with the data rows
+    const csvString = [headers.join(','), ...csvRows].join('\n');
+    return csvString;
+};

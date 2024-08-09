@@ -8,7 +8,7 @@ import { controllerSchema } from "$lib/server/config/zodSchemas";
 
 import { eq, or, desc } from 'drizzle-orm';
 import { db } from "$lib/server/db";
-import { chargingControllerTable, chargerTable, companyTable, usersToCompaniesTable, chargingSessionTable } from "$lib/server/db/schema";
+import { chargingControllerTable, chargerTable, companyTable, usersToCompaniesTable, chargingSessionTable, rfidTagTable, userTable, profileTable } from "$lib/server/db/schema";
 
 export const load = async ({ locals, params, cookies }) => {
     const user = locals.user;
@@ -43,8 +43,33 @@ export const load = async ({ locals, params, cookies }) => {
         .from(chargingSessionTable)
         .where(eq(chargingSessionTable.id, Number(params.sessionId)));
 
+    let employeeRfid;
+    let rfidDescription;
+
+    if (chargingSession.rfidTag) {
+        [employeeRfid] = await db
+            .select({
+                email: userTable.email,
+                firstName: profileTable.firstName,
+                lastName: profileTable.lastName
+            })
+            .from(usersToCompaniesTable)
+            .leftJoin(userTable, eq(usersToCompaniesTable.userId, userTable.id))
+            .leftJoin(profileTable, eq(userTable.id, profileTable.userId))
+            .where(eq(usersToCompaniesTable.rfidTag, chargingSession.rfidTag));
+
+        [rfidDescription] = await db
+            .select({
+                description: rfidTagTable.description
+            })
+            .from(rfidTagTable)
+            .where(eq(rfidTagTable.tag, chargingSession.rfidTag));
+    }
+
     return {
         controller: controller,
-        chargingSession: chargingSession
+        chargingSession: chargingSession,
+        employeeRfid: employeeRfid,
+        rfidDescription: rfidDescription?.description
     }
 }

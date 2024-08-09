@@ -25,10 +25,7 @@ export const userSchema = z.object({
         .string()
         .max(50, { message: "Příjmení může mít maximálně 50 znaků" })
         .trim()
-        .nullish(),
-    userId: z
-        .string()
-        .min(1, { message: "Vyberte registrovaného uživatele" })
+        .nullish()
 });
 
 export const registerSchema = z.object({
@@ -36,8 +33,7 @@ export const registerSchema = z.object({
         .string()
         .email({ message: "Zadejte prosím platný email" })
         .trim()
-        .toLowerCase()
-        .min(1, { message: "E-mail je povinná hodnota" }),
+        .toLowerCase(),
     firstName: z
         .string()
         .max(50, { message: "Křestní jméno může mít maximálně 50 znaků" })
@@ -66,37 +62,16 @@ export const chargerSchema = z.object({
     name: z
         .string()
         .trim()
-        .min(1, { message: "Zadejte jméno nabíjecí stanice" }),
+        .min(1, { message: "Jméno nabíjecí stanice nemůže být prázdné" }),
     description: z
         .string()
         .trim()
         .nullish(),
-    ipAddress: z
-        .string()
-        .ip({ version: 'v4', message: "Zadejte platnou IP adresu" }),
-    mqttPort: z
-        .number()
-        .min(1, { message: "MQTT port musí být mezi 1-65535" })
-        .max(65535, { message: "MQTT port musí být mezi 1-65535" })
-        .default(1883),
-    mqttUser: z
-        .string()
-        .trim()
-        .nullish(),
-    mqttPassword: z
-        .string()
-        .trim()
-        .nullish(),
-    restApiPort: z
-        .number()
-        .min(1, { message: "REST API port musí být mezi 1-65535" })
-        .max(65535, { message: "REST API port musí být mezi 1-65535" })
-        .default(5555),
     companyId: z
         .number()
         .nullish(),
     userId: z
-        .number()
+        .string()
         .nullish()
 });
 
@@ -111,7 +86,7 @@ export const companySchema = z.object({
     name: z
         .string()
         .trim()
-        .min(1, { message: "Zadejte jméno společnosti nebo jméno a příjmení" }),
+        .min(1, { message: "Jméno společnosti nemůže být prázdné" }),
     ic: z
         .string()
         .length(8, { message: "IČO musí mít 8 znaků" }),
@@ -140,14 +115,38 @@ export const companySchema = z.object({
         .nullish()
 });
 
-export const rfidSchema = z.object({
+export const employeeSchema = z.object({
+    userId: z
+        .string()
+        .min(1, { message: "Vyberte registrovaného uživatele" }),
+    role: z
+        .string()
+        .min(1, { message: "Vyberte roli zaměstnance" })
+});
+
+export const employeeRfidSchema = z.object({
     rfidTag: z
         .string()
-        .trim()
-        .min(1, { message: "Zadejte RFID" }),
+        .trim(),
     rfidValidTill: z
         .date()
         .nullish(),
     userId: z
+        .string(),
+});
+
+export const otherRfidSchema = z.object({
+    id: z
+        .number()
+        .nullish(),
+    rfidTag: z
         .string()
+        .trim()
+        .min(1, { message: "RFID nemůže být prázdné" }),
+    rfidValidTill: z
+        .date()
+        .nullish(),
+    description: z
+        .string()
+        .nullish()
 });

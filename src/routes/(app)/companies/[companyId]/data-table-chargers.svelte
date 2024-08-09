@@ -8,9 +8,11 @@
 	import * as Table from '$lib/components/ui/table';
 
 	import DataTableActions from './data-table-actions-chargers.svelte';
-	import DataTableSort from '$lib/components/data-table/data-table-sort.svelte';
+	import DataTableSort from '$lib/components/data-table/controls/data-table-sort.svelte';
 
 	export let data;
+	export let user;
+	export let userInCompany;
 
 	const tableData = writable(data);
 	const table = createTable(tableData, {
@@ -82,10 +84,11 @@
 			id: 'actions',
 			header: '',
 			cell: ({ value }) => {
-				return createRender(DataTableActions, { id: value }).on(
-					'chargerDeleted',
-					handleChargerDelete
-				);
+				return createRender(DataTableActions, {
+					id: value,
+					user: user,
+					userInCompany: userInCompany
+				}).on('chargerDeleted', handleChargerDelete);
 			},
 			plugins: {
 				sort: {

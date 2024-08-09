@@ -7,8 +7,16 @@
 	import DataLabel from '$lib/components/editable-data/data-label.svelte';
 	import DataPlaceholder from '$lib/components/editable-data/data-placeholder.svelte';
 	import InputContainer from '$lib/components/editable-data/input-container.svelte';
+	import SessionStatus from '$lib/components/charging-status/session-status.svelte';
+	import RfidName from '$lib/components/rfid-name/rfid-name.svelte';
+	import RfidIdentifier from '$lib/components/data-table/fields/rfid-identifier.svelte';
 
-	import { convertTimestampToDate, convertSecondstoTime, convertEnergyPower } from '$lib/utils';
+	import {
+		emptyStringOnNull,
+		convertTimestampToDate,
+		convertSecondstoTime,
+		convertEnergyPower
+	} from '$lib/utils';
 
 	export let data;
 </script>
@@ -57,6 +65,18 @@
 				</Card.Header>
 
 				<Card.Content class="flex flex-col gap-4 p-0">
+					<!-- STAV -->
+					<DataContainer>
+						<DataLabel>Stav</DataLabel>
+						<InputContainer>
+							<DataPlaceholder>
+								<SessionStatus
+									status={data.chargingSession.endTimestamp ? 'finished' : 'charging'}
+								/>
+							</DataPlaceholder>
+						</InputContainer>
+					</DataContainer>
+
 					<!-- ID NABÍJECÍ RELACE -->
 					<DataContainer>
 						<DataLabel>ID nabíjecí relace</DataLabel>
@@ -72,7 +92,20 @@
 						<DataLabel>RFID</DataLabel>
 						<InputContainer>
 							<DataPlaceholder>
-								{data.chargingSession.rfidTag}
+								{emptyStringOnNull(data.chargingSession.rfidTag)}
+							</DataPlaceholder>
+						</InputContainer>
+					</DataContainer>
+
+					<!-- RFID IDENTIFIER -->
+					<DataContainer>
+						<DataLabel>RFID identifikátor</DataLabel>
+						<InputContainer>
+							<DataPlaceholder>
+								<RfidIdentifier
+									employee={data.employeeRfid}
+									rfidDescription={data.rfidDescription}
+								/>
 							</DataPlaceholder>
 						</InputContainer>
 					</DataContainer>

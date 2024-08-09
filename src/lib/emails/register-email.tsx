@@ -8,7 +8,7 @@ interface RegisterEmailProps {
 export const RegisterEmail = ({
   verificationLink
 }: RegisterEmailProps) => {
-  const previewText = "Dokončete svou registraci na portálu EEM"
+  const previewText = "Dokončete svou registraci na portálu EMM"
 
   return (
     <Html>
@@ -27,7 +27,7 @@ export const RegisterEmail = ({
           <Container className={emailStyles.container}>
             <Text className={emailStyles.text}>Dobrý den,</Text>
             <Text className={emailStyles.text}>
-                zasíláme vám pozvánku k registraci do portálu EWE E-Unit management, která vám umožní
+                zasíláme vám pozvánku k registraci do portálu EWE mobility management, která vám umožní
 				snadný dohled a kontrolu nad vaší nabíjecí stanicí.
             </Text>
 

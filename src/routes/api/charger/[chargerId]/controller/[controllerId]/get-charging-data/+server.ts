@@ -1,10 +1,8 @@
 import { error, json } from '@sveltejs/kit';
 
-import { eq, and, or } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { db } from "$lib/server/db";
-import { chargerTable, chargingControllerTable, usersToCompaniesTable } from "$lib/server/db/schema";
-
-import { fetchChargingData } from '$lib/server/utils.js';
+import { chargerTable, chargingControllerTable, controllerDataTable, usersToCompaniesTable } from "$lib/server/db/schema";
 
 export const GET = async ({ locals, params }) => {
     // get the current login session
@@ -34,9 +32,16 @@ export const GET = async ({ locals, params }) => {
     // Charger doesn't have the corresponding controller
     if (!charger.controller) error(404);
 
+    const [chargingController] = await db
+        .select({
+            charger: chargerTable,
+            controller: chargingControllerTable,
+            controllerData: controllerDataTable
+        })
+        .from(chargingControllerTable)
+        .leftJoin(chargerTable, eq(chargingControllerTable.chargerId, chargerTable.id))
+        .leftJoin(controllerDataTable, eq(chargingControllerTable.id, controllerDataTable.controllerId))
+        .where(eq(chargingControllerTable.id, params.controllerId));
 
-    if (!charger.charger.ipAddress || !charger.charger.restApiPort) error(404);
-    const chargingData = await fetchChargingData(charger.charger.ipAddress, charger.charger.restApiPort, charger.controller.id);
-
-    return json(await chargingData.json());
+    return json(chargingController);
 }

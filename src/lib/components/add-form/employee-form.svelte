@@ -4,10 +4,11 @@
 	import { Separator } from '$lib/components/ui/separator';
 
 	import UserCombobox from './misc/user-combobox.svelte';
+	import RoleSelect from './misc/role-select.svelte';
 
 	import { TriangleAlert, Plus } from 'lucide-svelte';
 
-	import { superForm } from 'sveltekit-superforms';
+	import SuperDebug, { superForm } from 'sveltekit-superforms';
 
 	export let formObj: any;
 	export let users: any;
@@ -32,6 +33,9 @@ active:ring-2 active:ring-offset-0 active:ring-primary/30 active:border-primary/
 			<Dialog.Title>Přidat zaměstnance</Dialog.Title>
 			<Separator />
 		</Dialog.Header>
+
+		<SuperDebug data={$formData} />
+
 		<form
 			id="inviteUserForm"
 			class="flex flex-col gap-6"
@@ -40,6 +44,7 @@ active:ring-2 active:ring-offset-0 active:ring-primary/30 active:border-primary/
 			use:enhance
 		>
 			<UserCombobox {form} bind:formData={$formData} {users} bind:comboboxOpen />
+			<RoleSelect {form} bind:formData={$formData} />
 
 			{#if $message}
 				<span class="inline-flex items-center gap-1 text-sm text-destructive font-medium">
@@ -49,7 +54,7 @@ active:ring-2 active:ring-offset-0 active:ring-primary/30 active:border-primary/
 			{/if}
 		</form>
 
-		<div>
+		<Dialog.Footer class="!flex-col">
 			<Separator class="mb-2" />
 			<div class="flex justify-end gap-1.5">
 				<Button
@@ -69,6 +74,6 @@ active:ring-2 active:ring-offset-0 active:ring-primary/30 active:border-primary/
 					>Přidat zaměstnance</Button
 				>
 			</div>
-		</div>
+		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

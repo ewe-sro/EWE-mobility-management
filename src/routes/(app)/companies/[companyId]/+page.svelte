@@ -15,25 +15,32 @@
 	import DataLabel from '$lib/components/editable-data/data-label.svelte';
 	import DataPlaceholder from '$lib/components/editable-data/data-placeholder.svelte';
 	import InputContainer from '$lib/components/editable-data/input-container.svelte';
+	import InputErrorContainer from '$lib/components/editable-data/input-error-container.svelte';
 
 	import TableSkeleton from '$lib/components/table-skeleton/table-skeleton.svelte';
 	import DataTableEmployees from './data-table-employees.svelte';
 	import DataTableChargers from './data-table-chargers.svelte';
 	import DataTableSessions from './data-table-sessions.svelte';
+	import DataTableRfid from './data-table-rfid.svelte';
 	import CompanyDetailSubcard from '$lib/components/cards/company-card/company-subcard/company-detail-subcard.svelte';
 	import ChargerForm from '$lib/components/add-form/charger-form.svelte';
 	import EmployeeForm from '$lib/components/add-form/employee-form.svelte';
+	import RfidForm from '$lib/components/add-form/rfid-form.svelte';
+
+	import ShowToAdminsAndManagers from '$lib/components/role-container/show-to-admins-and-managers.svelte';
+	import ShowToAdminsManagersAndEmployees from '$lib/components/role-container/show-to-admins-managers-and-employees.svelte';
 
 	import { emptyStringOnNull, convertTokW } from '$lib/utils';
 
 	export let data;
 
 	const form = superForm(data.companyForm);
-	const { form: formData, message, enhance } = form;
+	const { form: formData, message, errors, enhance } = form;
 
 	// Used for tracking state of dialog
 	let employeeDialogOpen = false;
 	let chargerDialogOpen = false;
+	let otherRfidDialogOpen = false;
 
 	let editCompanyForm = false;
 
@@ -93,7 +100,9 @@
 				<Card.Header class="p-0">
 					<div class="flex justify-between items-center">
 						<Card.Title tag="h2" class="text-xl font-semibold">Údaje společnosti</Card.Title>
-						<Buttons bind:edit={editCompanyForm} formId="companyForm" {toggleForm} />
+						<ShowToAdminsAndManagers user={data.user} userInCompany={data.userInCompany}>
+							<Buttons bind:edit={editCompanyForm} formId="companyForm" {toggleForm} />
+						</ShowToAdminsAndManagers>
 					</div>
 					<Separator />
 				</Card.Header>
@@ -111,12 +120,12 @@
 						<DataContainer>
 							<DataLabel forInput="name">Název společnosti</DataLabel>
 							<InputContainer>
-								{#if !editCompanyForm}
-									<DataPlaceholder>
-										{data.company.name}
-									</DataPlaceholder>
-								{:else}
-									<Form.Field {form} name="name">
+								<Form.Field {form} name="name">
+									{#if !editCompanyForm}
+										<DataPlaceholder>
+											{data.company.name}
+										</DataPlaceholder>
+									{:else}
 										<Form.Control let:attrs>
 											<Input
 												{...attrs}
@@ -126,8 +135,13 @@
 												class="focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
 											/>
 										</Form.Control>
-									</Form.Field>
-								{/if}
+									{/if}
+									{#if $errors.name}
+										<InputErrorContainer>
+											<Form.FieldErrors />
+										</InputErrorContainer>
+									{/if}
+								</Form.Field>
 							</InputContainer>
 						</DataContainer>
 
@@ -135,12 +149,12 @@
 						<DataContainer>
 							<DataLabel forInput="ic">IČO</DataLabel>
 							<InputContainer>
-								{#if !editCompanyForm}
-									<DataPlaceholder>
-										{emptyStringOnNull(data.company.ic)}
-									</DataPlaceholder>
-								{:else}
-									<Form.Field {form} name="ic">
+								<Form.Field {form} name="ic">
+									{#if !editCompanyForm}
+										<DataPlaceholder>
+											{emptyStringOnNull(data.company.ic)}
+										</DataPlaceholder>
+									{:else}
 										<Form.Control let:attrs>
 											<Input
 												{...attrs}
@@ -150,8 +164,13 @@
 												class="focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
 											/>
 										</Form.Control>
-									</Form.Field>
-								{/if}
+									{/if}
+									{#if $errors.ic}
+										<InputErrorContainer>
+											<Form.FieldErrors />
+										</InputErrorContainer>
+									{/if}
+								</Form.Field>
 							</InputContainer>
 						</DataContainer>
 
@@ -159,12 +178,12 @@
 						<DataContainer>
 							<DataLabel forInput="dic">DIČ</DataLabel>
 							<InputContainer>
-								{#if !editCompanyForm}
-									<DataPlaceholder>
-										{emptyStringOnNull(data.company.dic)}
-									</DataPlaceholder>
-								{:else}
-									<Form.Field {form} name="dic">
+								<Form.Field {form} name="dic">
+									{#if !editCompanyForm}
+										<DataPlaceholder>
+											{emptyStringOnNull(data.company.dic)}
+										</DataPlaceholder>
+									{:else}
 										<Form.Control let:attrs>
 											<Input
 												{...attrs}
@@ -174,8 +193,13 @@
 												class="focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
 											/>
 										</Form.Control>
-									</Form.Field>
-								{/if}
+									{/if}
+									{#if $errors.dic}
+										<InputErrorContainer>
+											<Form.FieldErrors />
+										</InputErrorContainer>
+									{/if}
+								</Form.Field>
 							</InputContainer>
 						</DataContainer>
 
@@ -183,12 +207,12 @@
 						<DataContainer>
 							<DataLabel forInput="street">Ulice</DataLabel>
 							<InputContainer>
-								{#if !editCompanyForm}
-									<DataPlaceholder>
-										{emptyStringOnNull(data.company.street)}
-									</DataPlaceholder>
-								{:else}
-									<Form.Field {form} name="street">
+								<Form.Field {form} name="street">
+									{#if !editCompanyForm}
+										<DataPlaceholder>
+											{emptyStringOnNull(data.company.street)}
+										</DataPlaceholder>
+									{:else}
 										<Form.Control let:attrs>
 											<Input
 												{...attrs}
@@ -198,8 +222,13 @@
 												class="focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
 											/>
 										</Form.Control>
-									</Form.Field>
-								{/if}
+									{/if}
+									{#if $errors.street}
+										<InputErrorContainer>
+											<Form.FieldErrors />
+										</InputErrorContainer>
+									{/if}
+								</Form.Field>
 							</InputContainer>
 						</DataContainer>
 
@@ -207,12 +236,12 @@
 						<DataContainer>
 							<DataLabel forInput="street">Město</DataLabel>
 							<InputContainer>
-								{#if !editCompanyForm}
-									<DataPlaceholder>
-										{emptyStringOnNull(data.company.city)}
-									</DataPlaceholder>
-								{:else}
-									<Form.Field {form} name="city">
+								<Form.Field {form} name="city">
+									{#if !editCompanyForm}
+										<DataPlaceholder>
+											{emptyStringOnNull(data.company.city)}
+										</DataPlaceholder>
+									{:else}
 										<Form.Control let:attrs>
 											<Input
 												{...attrs}
@@ -222,8 +251,13 @@
 												class="focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
 											/>
 										</Form.Control>
-									</Form.Field>
-								{/if}
+									{/if}
+									{#if $errors.city}
+										<InputErrorContainer>
+											<Form.FieldErrors />
+										</InputErrorContainer>
+									{/if}
+								</Form.Field>
 							</InputContainer>
 						</DataContainer>
 
@@ -231,12 +265,12 @@
 						<DataContainer>
 							<DataLabel forInput="street">PSČ</DataLabel>
 							<InputContainer>
-								{#if !editCompanyForm}
-									<DataPlaceholder>
-										{emptyStringOnNull(data.company.zip)}
-									</DataPlaceholder>
-								{:else}
-									<Form.Field {form} name="zip">
+								<Form.Field {form} name="zip">
+									{#if !editCompanyForm}
+										<DataPlaceholder>
+											{emptyStringOnNull(data.company.zip)}
+										</DataPlaceholder>
+									{:else}
 										<Form.Control let:attrs>
 											<Input
 												{...attrs}
@@ -246,8 +280,13 @@
 												class="focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
 											/>
 										</Form.Control>
-									</Form.Field>
-								{/if}
+									{/if}
+									{#if $errors.city}
+										<InputErrorContainer>
+											<Form.FieldErrors />
+										</InputErrorContainer>
+									{/if}
+								</Form.Field>
 							</InputContainer>
 						</DataContainer>
 					</form>
@@ -255,49 +294,56 @@
 			</Card.Root>
 
 			<div class="flex flex-col gap-4">
-				<Card.Root class="flex flex-col gap-4 *:w-full p-8">
-					<Card.Header class="p-0">
-						<div class="flex justify-between items-center">
-							<Card.Title tag="h2" class="text-xl font-semibold">Nabíjecí stanice</Card.Title>
-							{#if data.user.role === 'ADMIN'}
-								<ChargerForm
-									formObj={data.chargerForm}
-									companies={data.companies}
-									users={data.users}
-									keyIcon={false}
-									bind:dialogOpen={chargerDialogOpen}
-								/>
+				<ShowToAdminsManagersAndEmployees user={data.user} userInCompany={data.userInCompany}>
+					<Card.Root class="flex flex-col gap-4 *:w-full p-8">
+						<Card.Header class="p-0">
+							<div class="flex justify-between items-center">
+								<Card.Title tag="h2" class="text-xl font-semibold">Nabíjecí stanice</Card.Title>
+								{#if data.user.role === 'ADMIN'}
+									<ChargerForm
+										formObj={data.chargerForm}
+										companies={data.companies}
+										users={data.users}
+										keyIcon={false}
+										bind:dialogOpen={chargerDialogOpen}
+										selectedCompanyId={$page.params.companyId}
+									/>
+								{/if}
+							</div>
+							<Separator />
+						</Card.Header>
+
+						<Card.Content class="p-0">
+							{#if data.chargers.length === 0}
+								<TableSkeleton />
+							{:else}
+								{#key data.chargers}
+									<DataTableChargers
+										data={data.chargers}
+										user={data.user}
+										userInCompany={data.userInCompany}
+									/>
+								{/key}
 							{/if}
-						</div>
-						<Separator />
-					</Card.Header>
+						</Card.Content>
+					</Card.Root>
 
-					<Card.Content class="p-0">
-						{#if data.chargers.length === 0}
-							<TableSkeleton />
-						{:else}
-							{#key data.chargers}
-								<DataTableChargers data={data.chargers} />
-							{/key}
-						{/if}
-					</Card.Content>
-				</Card.Root>
-
-				<!-- CHARGER STATS -->
-				<div class="grid grid-cols-3 gap-4">
-					<CompanyDetailSubcard>
-						<span slot="valueName">Nabíjecí stanice</span>
-						<span slot="value">{data.chargerCount}</span>
-					</CompanyDetailSubcard>
-					<CompanyDetailSubcard>
-						<span slot="valueName">Nabíjecí body</span>
-						<span slot="value">{data.controllerCount}</span>
-					</CompanyDetailSubcard>
-					<CompanyDetailSubcard>
-						<span slot="valueName">K dispozici</span>
-						<span slot="value">{data.availableCount}</span>
-					</CompanyDetailSubcard>
-				</div>
+					<!-- CHARGER STATS -->
+					<div class="grid grid-cols-3 gap-4">
+						<CompanyDetailSubcard>
+							<span slot="valueName">Nabíjecí stanice</span>
+							<span slot="value">{data.chargerCount}</span>
+						</CompanyDetailSubcard>
+						<CompanyDetailSubcard>
+							<span slot="valueName">Nabíjecí body</span>
+							<span slot="value">{data.controllerCount}</span>
+						</CompanyDetailSubcard>
+						<CompanyDetailSubcard>
+							<span slot="valueName">K dispozici</span>
+							<span slot="value">{data.availableCount}</span>
+						</CompanyDetailSubcard>
+					</div>
+				</ShowToAdminsManagersAndEmployees>
 
 				<!-- LAST 10 CHARGING SESSIONS -->
 				<Card.Root class="flex flex-col gap-4 *:w-full p-8">
@@ -332,53 +378,67 @@
 				</div>
 			</div>
 
-			<Card.Root class="flex flex-col gap-4 *:w-full p-8">
-				<Card.Header class="p-0">
-					<div class="flex justify-between items-center">
-						<Card.Title tag="h2" class="text-xl font-semibold">Zaměstnanci</Card.Title>
-						{#if data.user.role === 'ADMIN'}
-							<EmployeeForm
-								formObj={data.employeeForm}
-								users={data.users}
-								bind:dialogOpen={employeeDialogOpen}
-								bind:comboboxOpen
-							/>
+			<ShowToAdminsManagersAndEmployees user={data.user} userInCompany={data.userInCompany}>
+				<Card.Root class="flex flex-col gap-4 *:w-full p-8">
+					<Card.Header class="p-0">
+						<div class="flex justify-between items-center">
+							<Card.Title tag="h2" class="text-xl font-semibold">Zaměstnanci</Card.Title>
+							{#if data.user.role === 'ADMIN'}
+								<EmployeeForm
+									formObj={data.employeeForm}
+									users={data.users}
+									bind:dialogOpen={employeeDialogOpen}
+									bind:comboboxOpen
+								/>
+							{/if}
+						</div>
+						<Separator />
+					</Card.Header>
+
+					<Card.Content class="p-0">
+						{#if data.employees.length === 0}
+							<TableSkeleton />
+						{:else}
+							{#key data.employees}
+								<DataTableEmployees
+									data={data.employees}
+									rfidForm={data.employeeRfidForm}
+									employeeForm={data.employeeForm}
+									user={data.user}
+									userInCompany={data.userInCompany}
+								/>
+							{/key}
 						{/if}
-					</div>
-					<Separator />
-				</Card.Header>
+					</Card.Content>
+				</Card.Root>
 
-				<Card.Content class="p-0">
-					{#if data.employees.length === 0}
-						<TableSkeleton />
-					{:else}
-						{#key data.employees}
-							<DataTableEmployees data={data.employees} rfidForm={data.rfidForm} />
-						{/key}
-					{/if}
-				</Card.Content>
-			</Card.Root>
+				<Card.Root class="flex flex-col gap-4 *:w-full p-8">
+					<Card.Header class="p-0">
+						<div class="flex justify-between items-center">
+							<Card.Title tag="h2" class="text-xl font-semibold">RFID čipy</Card.Title>
+							<ShowToAdminsAndManagers user={data.user} userInCompany={data.userInCompany}>
+								<RfidForm dialogOpen={otherRfidDialogOpen} formObj={data.otherRfidForm} />
+							</ShowToAdminsAndManagers>
+						</div>
+						<Separator />
+					</Card.Header>
 
-			<Card.Root class="flex flex-col gap-4 *:w-full p-8">
-				<Card.Header class="p-0">
-					<div class="flex justify-between items-center">
-						<Card.Title tag="h2" class="text-xl font-semibold">RFID čipy</Card.Title>
-						{#if data.user.role === 'ADMIN'}
-							<EmployeeForm
-								formObj={data.employeeForm}
-								users={data.users}
-								bind:dialogOpen={employeeDialogOpen}
-								bind:comboboxOpen
-							/>
+					<Card.Content class="p-0">
+						{#if data.rfidTags.length === 0}
+							<TableSkeleton />
+						{:else}
+							{#key data.rfidTags}
+								<DataTableRfid
+									data={data.rfidTags}
+									rfidForm={data.otherRfidForm}
+									user={data.user}
+									userInCompany={data.userInCompany}
+								/>
+							{/key}
 						{/if}
-					</div>
-					<Separator />
-				</Card.Header>
-
-				<Card.Content class="p-0">
-					<TableSkeleton />
-				</Card.Content>
-			</Card.Root>
+					</Card.Content>
+				</Card.Root>
+			</ShowToAdminsManagersAndEmployees>
 		</div>
 	</div>
 </section>

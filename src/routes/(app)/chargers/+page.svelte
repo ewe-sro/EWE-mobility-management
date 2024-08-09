@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { invalidateAll } from '$app/navigation';
+
 	import ChargerForm from '$lib/components/add-form/charger-form.svelte';
 	import ChargerCard from '$lib/components/cards/charger-card/charger-card.svelte';
 	import Keybinding from '$lib/components/keybinding/keybinding.svelte';
@@ -8,10 +10,20 @@
 	// Used for tracking state of dialog
 	let dialogOpen = false;
 
+	let companyChargers: any;
+	let userChargers: any;
+	let otherChargers: any;
+
+	$: if (data.chargers) {
+		companyChargers = data.chargers.filter((row) => row.charger.companyId);
+		userChargers = data.chargers.filter((row) => row.charger.userId);
+		otherChargers = data.chargers.filter((row) => !row.charger.companyId && !row.charger.userId);
+	}
+
 	const handleChargerDelete = (event: any) => {
 		const deletedId = event.detail;
 
-		data.chargers = data.chargers.filter((charger: any) => charger.charger.id !== deletedId);
+		invalidateAll();
 	};
 </script>
 
@@ -40,7 +52,7 @@
 						<div class="flex flex-col gap-4">
 							<h3 class="text-xl font-semibold">{company.company.name}</h3>
 							<div class="grid grid-cols-2 gap-8">
-								{#each data.chargers as charger}
+								{#each companyChargers as charger}
 									{#if company.company.id === charger.charger.companyId}
 										<ChargerCard
 											on:chargerDeleted={handleChargerDelete}
@@ -54,20 +66,41 @@
 					{/if}
 				{/each}
 
-				<div class="flex flex-col gap-4">
-					<h3 class="text-xl font-semibold">Ostatní</h3>
-					<div class="grid grid-cols-2 gap-8">
-						{#each data.chargers as charger}
-							{#if charger.charger.companyId === null}
+				{#if userChargers.length > 0}
+					{#each data.usersWithCharger as user}
+						{@const currentUserChargers = userChargers.filter(
+							(row) => row.charger.userId === user.user.id
+						)}
+
+						<div class="flex flex-col gap-4">
+							<h3 class="text-xl font-semibold">Ostatní</h3>
+							<div class="grid grid-cols-2 gap-8">
+								{#each currentUserChargers as charger}
+									<ChargerCard
+										on:chargerDeleted={handleChargerDelete}
+										data={charger}
+										user={data.user}
+									/>
+								{/each}
+							</div>
+						</div>
+					{/each}
+				{/if}
+
+				{#if otherChargers.length > 0}
+					<div class="flex flex-col gap-4">
+						<h3 class="text-xl font-semibold">Nepřiřazené</h3>
+						<div class="grid grid-cols-2 gap-8">
+							{#each otherChargers as charger}
 								<ChargerCard
 									on:chargerDeleted={handleChargerDelete}
 									data={charger}
 									user={data.user}
 								/>
-							{/if}
-						{/each}
+							{/each}
+						</div>
 					</div>
-				</div>
+				{/if}
 			{/key}
 		</div>
 	</div>

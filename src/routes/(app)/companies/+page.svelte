@@ -1,8 +1,4 @@
 <script lang="ts">
-	import { Input } from '$lib/components/ui/input';
-
-	import { Search } from 'lucide-svelte';
-
 	import CompanyForm from '$lib/components/add-form/company-form.svelte';
 	import CompanyCard from '$lib/components/cards/company-card/company-card.svelte';
 	import Keybinding from '$lib/components/keybinding/keybinding.svelte';
@@ -12,22 +8,6 @@
 
 	// Used for tracking state of dialog
 	let dialogOpen = false;
-
-	// Used for filter
-	let searchInputValue: string;
-	$: sourceData = data.companies;
-
-	const filterData = (inputValue: string) => {
-		sourceData = data.companies.filter((item) =>
-			item.companyTable.name.toLowerCase().includes(inputValue)
-		);
-	};
-
-	const handleCompanyDelete = (event: any) => {
-		const deletedId = event.detail;
-
-		sourceData = sourceData.filter((company: any) => company.companyTable.id !== deletedId);
-	};
 </script>
 
 <Keybinding key="n" bind:variable={dialogOpen} />
@@ -38,34 +18,22 @@
 		<div class="flex justify-between items-center">
 			<h1 class="text-3xl font-bold">Společnosti</h1>
 
-			{#if sourceData.length > 0}
-				<div class="relative w-full max-w-xs">
-					<Input
-						bind:value={searchInputValue}
-						on:input={() => filterData(searchInputValue)}
-						class="pl-10 w-full focus-visible:ring-0 focus-visible:ring-offset-0"
-						placeholder="Hledat..."
-					/>
-					<Search
-						size="20"
-						class="absolute top-1/2 -translate-y-1/2 left-2 text-muted-foreground"
-					/>
-				</div>
-			{/if}
-
 			{#if data.user.role === 'ADMIN'}
 				<CompanyForm {data} bind:dialogOpen />
 			{/if}
 		</div>
 		<div class="flex flex-col gap-8">
-			{#if sourceData.length === 0}
+			{#if data.companies.length === 0}
 				<TableSkeleton />
 			{:else}
 				{#key data.companies}
-					{#each sourceData as company}
-						{@const graphData = data.chargingData[company.companyTable.id]}
+					{#each data.companies as company}
+						{@const chargingData = data.chargingData[company.companyTable.id]}
+						{@const employeeCount = data.employeeCount.filter(
+							(row) => row.companyId === company.companyTable.id
+						)}
 
-						<CompanyCard on:companyDeleted={handleCompanyDelete} {company} user={data.user} {graphData} />
+						<CompanyCard {company} {employeeCount} user={data.user} {chargingData} />
 					{/each}
 				{/key}
 			{/if}

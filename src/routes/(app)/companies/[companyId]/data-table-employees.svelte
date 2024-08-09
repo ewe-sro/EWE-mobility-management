@@ -8,10 +8,14 @@
 	import * as Table from '$lib/components/ui/table';
 
 	import DataTableActions from './data-table-actions-employees.svelte';
-	import DataTableSort from '$lib/components/data-table/data-table-sort.svelte';
+	import DataTableSort from '$lib/components/data-table/controls/data-table-sort.svelte';
 
 	export let data;
 	export let rfidForm;
+	export let employeeForm;
+
+	export let user;
+	export let userInCompany;
 
 	const tableData = writable(data);
 	const table = createTable(tableData, {
@@ -104,8 +108,11 @@
 			cell: ({ value }) => {
 				return createRender(DataTableActions, {
 					id: value,
-					formObj: rfidForm,
-					employee: data.filter((row: any) => row.id === value)
+					rfidForm: rfidForm,
+					employeeForm: employeeForm,
+					employee: data.filter((row: any) => row.id === value),
+					user: user,
+					userInCompany: userInCompany
 				}).on('employeeDeleted', handleEmployeeDelete);
 			},
 			plugins: {
