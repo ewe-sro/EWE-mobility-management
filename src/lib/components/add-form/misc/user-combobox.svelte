@@ -51,7 +51,7 @@
 						{#each users as user}
 							<Command.Item
 								class="cursor-pointer"
-								value="{user.profile.email}-{user.profile.firstName}-{user.profile.lastName}"
+								value={user.email}
 								onSelect={() => {
 									formData.userId = user.user.id;
 									closeAndFocusTrigger(ids.trigger);

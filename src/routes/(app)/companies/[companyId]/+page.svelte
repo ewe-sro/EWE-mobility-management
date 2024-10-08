@@ -46,16 +46,6 @@
 
 	let comboboxOpen = false;
 
-	// We want to refocus the trigger button when the user selects
-	// an item from the list so users can continue navigating the
-	// rest of the form with the keyboard.
-	function closeAndFocusTrigger(triggerId: string) {
-		comboboxOpen = false;
-		tick().then(() => {
-			document.getElementById(triggerId)?.focus();
-		});
-	}
-
 	const toggleForm = () => {
 		editCompanyForm = !editCompanyForm;
 
@@ -73,6 +63,10 @@
 		editCompanyForm = true;
 	}
 </script>
+
+<svelte:head>
+	<title>Společnosti – {data.company.name} – EMM</title>
+</svelte:head>
 
 <Breadcrumb.Root class="p-4">
 	<Breadcrumb.List>
@@ -303,7 +297,6 @@
 									<ChargerForm
 										formObj={data.chargerForm}
 										companies={data.companies}
-										users={data.users}
 										keyIcon={false}
 										bind:dialogOpen={chargerDialogOpen}
 										selectedCompanyId={$page.params.companyId}
@@ -318,11 +311,7 @@
 								<TableSkeleton />
 							{:else}
 								{#key data.chargers}
-									<DataTableChargers
-										data={data.chargers}
-										user={data.user}
-										userInCompany={data.userInCompany}
-									/>
+									<DataTableChargers data={data.chargers} user={data.user} />
 								{/key}
 							{/if}
 						</Card.Content>

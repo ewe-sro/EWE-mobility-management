@@ -62,6 +62,7 @@ export const POST = async ({ request }) => {
             await db
                 .insert(controllerDataTable)
                 .values({
+                    iec61851State: data[controller]["charging_data"]["iec_61851_state"],
                     connectedState: data[controller]["charging_data"]["connected_state"],
                     apparentEnergy: data[controller]["charging_data"]["apparent_energy"]["value"],
                     energyRealPower: data[controller]["charging_data"]["energy_real_power"]["value"],
@@ -83,6 +84,7 @@ export const POST = async ({ request }) => {
                 .onConflictDoUpdate({
                     target: controllerDataTable.controllerId,
                     set: {
+                        iec61851State: data[controller]["charging_data"]["iec_61851_state"],
                         connectedState: data[controller]["charging_data"]["connected_state"],
                         apparentEnergy: data[controller]["charging_data"]["apparent_energy"]["value"],
                         energyRealPower: data[controller]["charging_data"]["energy_real_power"]["value"],

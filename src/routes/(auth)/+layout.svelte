@@ -9,7 +9,7 @@
 		class="flex justify-center items-center min-h-screen min-w-screen py-32 ~px-4/8 bg-muted"
 	>
 		<div class="flex flex-col gap-4 w-full max-w-md has-[#registerForm]:max-w-3xl">
-			<Card.Root class="flex-grow relative p-12 rounded-2xl shadow-xl">
+			<Card.Root class="flex-grow relative ~p-8/12 rounded-2xl shadow-xl">
 				<slot />
 
 				<img

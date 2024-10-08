@@ -5,6 +5,10 @@
 	import logo from '$lib/assets/svgs/ewe_logo.svg';
 </script>
 
+<svelte:head>
+	<title>Správa nabíjecích stanic – EMM</title>
+</svelte:head>
+
 <section class="flex min-h-screen ~p-4/8 bg-muted">
 	<div
 		class="container m-auto flex flex-col justify-center items-start gap-4 h-full w-full max-w-md"

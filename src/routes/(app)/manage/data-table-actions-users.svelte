@@ -52,12 +52,12 @@
 				<DropdownMenu.Item href="/profile/{id}" class="text-muted-foreground font-medium"
 					>Detail uživatele</DropdownMenu.Item
 				>
-				<DropdownMenu.Item class="text-muted-foreground font-medium"
+				<DropdownMenu.Item href="/profile/{id}?edit=true" class="text-muted-foreground font-medium"
 					>Upravit údaje</DropdownMenu.Item
 				>
 				<DropdownMenu.Item
 					on:click={() => (deleteDialogOpen = true)}
-					class="text-destructive font-medium hover:bg-red-100 hover:text-destructive"
+					class="text-red-500 hover:text-red-500 dark:hover:text-white font-medium hover:bg-red-100 dark:hover:bg-red-500"
 					>Smazat uživatele</DropdownMenu.Item
 				>
 			{/if}
@@ -69,7 +69,7 @@
 <AlertDialog.Root bind:open={deleteDialogOpen}>
 	<AlertDialog.Content>
 		<AlertDialog.Header>
-			<AlertDialog.Title>Jste jisti, že chcete smazat tohoto uživatele?</AlertDialog.Title>
+			<AlertDialog.Title>Jste si jisti, že chcete smazat tohoto uživatele?</AlertDialog.Title>
 			<AlertDialog.Description>
 				Tuto akci nelze vzít zpět. Dojde k trvalému smazání všech uživatelských dat a uživatel se
 				již nebude schopný přihlásit.

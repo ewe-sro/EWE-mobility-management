@@ -10,6 +10,10 @@
 	let dialogOpen = false;
 </script>
 
+<svelte:head>
+	<title>Společnosti – EMM</title>
+</svelte:head>
+
 <Keybinding key="n" bind:variable={dialogOpen} />
 
 <section class="py-16 ~px-4/8">
@@ -19,7 +23,7 @@
 			<h1 class="text-3xl font-bold">Společnosti</h1>
 
 			{#if data.user.role === 'ADMIN'}
-				<CompanyForm {data} bind:dialogOpen />
+				<CompanyForm formObj={data.form} bind:dialogOpen />
 			{/if}
 		</div>
 		<div class="flex flex-col gap-8">
@@ -29,11 +33,8 @@
 				{#key data.companies}
 					{#each data.companies as company}
 						{@const chargingData = data.chargingData[company.companyTable.id]}
-						{@const employeeCount = data.employeeCount.filter(
-							(row) => row.companyId === company.companyTable.id
-						)}
 
-						<CompanyCard {company} {employeeCount} user={data.user} {chargingData} />
+						<CompanyCard {company} user={data.user} {chargingData} />
 					{/each}
 				{/key}
 			{/if}

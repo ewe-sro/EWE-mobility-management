@@ -1,14 +1,17 @@
-import { fluidExtractor, fluidCorePlugins, defaultThemeScreensInRems, defaultThemeFontSizeInRems } from 'fluid-tailwind'
+import fluid, { extract, screens, fontSize } from 'fluid-tailwind'
 const defaultTheme = require('tailwindcss/defaultTheme')
 
 /** @type {import('tailwindcss').Config} */
 const config = {
 	darkMode: "selector",
-	content: ["./src/**/*.{html,js,svelte,ts}"],
+	content: {
+		files: ["./src/**/*.{html,js,svelte,ts}"],
+		extract
+	},
   	safelist: ["dark"],
 	theme: {
-		fontSize: defaultThemeFontSizeInRems,
-    	screens: defaultThemeScreensInRems,
+		fontSize: fontSize,
+    	screens: screens,
 		extend: {
 			colors: {
 				primary: {
@@ -61,7 +64,7 @@ const config = {
 		}
 	},
 	plugins: [
-		fluidCorePlugins,
+		fluid,
 		require('tailwind-scrollbar'),
 	],
 };

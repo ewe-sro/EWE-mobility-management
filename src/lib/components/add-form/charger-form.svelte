@@ -14,7 +14,7 @@
 
 	export let formObj: any;
 	export let companies: any;
-	export let users: any;
+	//export let users: any;
 	export let keyIcon: boolean;
 	export let dialogOpen: boolean;
 	export let selectedCompanyId: undefined | string = undefined;

@@ -37,7 +37,7 @@ export const ResetEmail = ({
             </Button>
 
             <Text className={emailStyles.text}>
-              Pokud jste tuto žádost nepodali nebo máte potíže s přihlášením, kontaktujte nás prostřednictvím <Link href="#" className="text-primary font-semibold">naší stránky podpory</Link>.
+              Pokud jste tuto žádost nepodali nebo máte potíže s přihlášením, kontaktujte nás prostřednictvím emailu <Link href="mailto:wallbox@ewe.cz" className="text-primary font-semibold">wallbox@ewe.cz</Link>.
               Ve vašem účtu nebyly provedeny žádné změny.
             </Text>
           </Container>

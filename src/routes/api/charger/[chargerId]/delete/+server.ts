@@ -16,7 +16,7 @@ export const DELETE = async ({ locals, params, cookies }) => {
     // if user is not admin throw an error
     if (user.role !== "ADMIN") error(403, { message: "Your user account does not have the proper permissions" });
 
-    // delete the user
+    // delete the charger
     await db
         .delete(chargerTable)
         .where(eq(chargerTable.id, Number(params.chargerId)));

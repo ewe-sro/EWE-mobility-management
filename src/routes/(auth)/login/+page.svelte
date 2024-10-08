@@ -3,7 +3,8 @@
 	import * as Form from '$lib/components/ui/form';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
-	import { Separator } from '$lib/components/ui/separator';
+
+	import FormMessage from '$lib/components/form-message/form-message.svelte';
 
 	import { TriangleAlert, Loader2 } from 'lucide-svelte';
 
@@ -14,6 +15,10 @@
 	const form = superForm(data.form);
 	const { form: formData, message, enhance, delayed } = form;
 </script>
+
+<svelte:head>
+	<title>Přihlásit se – EMM</title>
+</svelte:head>
 
 <Card.Header class="p-0 pb-8">
 	<Card.Title tag="h1" class="text-2xl font-bold">Vítejte zpět</Card.Title>
@@ -31,6 +36,7 @@
 							{...attrs}
 							bind:value={$formData.email}
 							type="email"
+							autocomplete="email"
 							class="focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
 						/>
 					</Form.Control>
@@ -59,22 +65,28 @@
 				</Form.Field>
 			</div>
 
-			{#if $message}
-				<div class="flex items-center gap-2 text-sm text-destructive font-medium">
-					<TriangleAlert size="16" />
-					<span>{$message}</span>
-				</div>
-			{/if}
+			<FormMessage message={$message} />
 		</div>
 
-		<Form.Button
-			class="w-full text-white focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
-		>
-			{#if $delayed}
-				<Loader2 class="animate-spin-slow" />
-			{:else}
-				Přihlásit se
-			{/if}
-		</Form.Button>
+		<div class="flex flex-col items-center gap-4">
+			<Form.Button
+				disabled={$delayed}
+				class="w-full text-white focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
+			>
+				{#if $delayed}
+					<Loader2 class="animate-spin-slow" />
+				{:else}
+					Přihlásit se
+				{/if}
+			</Form.Button>
+
+			<Button
+				variant="link"
+				href="mailto:wallbox@ewe.cz?subject=Žádost o přístup do EMM"
+				class="h-auto p-0 hover:no-underline hover:text-black"
+			>
+				Nemáte přístup?
+			</Button>
+		</div>
 	</form>
 </Card.Content>

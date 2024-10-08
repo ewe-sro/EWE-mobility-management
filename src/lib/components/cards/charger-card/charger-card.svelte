@@ -8,30 +8,20 @@
 	import { Button } from '$lib/components/ui/button';
 
 	import ChargerStatus from '$lib/components/charging-status/charger-status.svelte';
+	import LastConnectedHoverCard from '$lib/components/last-connected-hover-card/last-connected-hover-card.svelte';
 	import Subcard from '../subcard/subcard.svelte';
 
 	import { Ellipsis } from 'lucide-svelte';
 
 	import { updateFlash } from 'sveltekit-flash-message';
 
-	import { getDateDifference } from '$lib/utils';
+	import { emptyStringOnNull } from '$lib/utils';
 
 	export let data;
 	export let user;
 
 	// Controls the delete dialog
 	let deleteDialogOpen = false;
-
-	// Get the status of the charger
-	let status;
-
-	if (!data.charger.lastConnected) {
-		status = 'unavailable';
-	} else if (getDateDifference(data.charger.lastConnected) > 3 * 60) {
-		status = 'offline';
-	} else {
-		status = 'online';
-	}
 
 	const dispatch = createEventDispatcher();
 
@@ -51,11 +41,14 @@
 	<Card.Header class="flex flex-row justify-between items-start gap-4 p-0 space-y-0">
 		<div class="flex flex-col items-start gap-1">
 			<Card.Title class="text-xl font-semibold">{data.charger.name}</Card.Title>
-			<Card.Description>{data.charger.description}</Card.Description>
+			<Card.Description>{emptyStringOnNull(data.charger.description)}</Card.Description>
 		</div>
 
 		<div class="flex items-center gap-2">
-			<ChargerStatus {status} class="bg-muted" />
+			<LastConnectedHoverCard lastConnected={data.charger.lastConnected}>
+				<ChargerStatus lastConnected={data.charger.lastConnected} />
+			</LastConnectedHoverCard>
+
 			<DropdownMenu.Root preventScroll={false}>
 				<DropdownMenu.Trigger asChild let:builder>
 					<Button
@@ -65,7 +58,10 @@
 						class="actions group relative h-8 w-8 p-0"
 					>
 						<span class="sr-only">Otevřít menu</span>
-						<Ellipsis size="16" class="text-muted-foreground group-hover:text-black" />
+						<Ellipsis
+							size="16"
+							class="text-muted-foreground group-hover:text-black dark:group-hover:text-white"
+						/>
 					</Button>
 				</DropdownMenu.Trigger>
 				<DropdownMenu.Content align="end">
@@ -76,11 +72,11 @@
 						>
 						{#if user.role === 'ADMIN'}
 							<DropdownMenu.Item
-								href="/chargers/{data.charger.id}?action=edit"
+								href="/chargers/{data.charger.id}?action=edit#information"
 								class="text-muted-foreground font-medium">Upravit údaje</DropdownMenu.Item
 							>
 							<DropdownMenu.Item
-								class="text-destructive font-medium hover:bg-red-100 hover:text-destructive"
+								class="text-red-500 hover:text-red-500 dark:hover:text-white font-medium hover:bg-red-100 dark:hover:bg-red-500"
 								on:click={() => (deleteDialogOpen = true)}
 								>Smazat nabíjecí stanici</DropdownMenu.Item
 							>

@@ -10,7 +10,7 @@ import { superValidate, message } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { registerSchema } from "$lib/server/config/zodSchemas";
 
-import { eq, isNull } from 'drizzle-orm';
+import { eq, asc } from 'drizzle-orm';
 import { db } from "$lib/server/db";
 import { userTable, profileTable, registerInvitationTable, companyTable, usersToCompaniesTable } from "$lib/server/db/schema";
 
@@ -29,15 +29,16 @@ const userAccountSchema = registerSchema.pick({
     path: ["role"],
 });
 
-export const load = (async ({ locals }) => {
-    if (!locals.user) {
-        redirect(401, "/login");
-    }
+export const load = (async ({ parent, locals, url, cookies }) => {
+    // Wait for the +layout.server.ts load function for route protection
+    await parent();
 
-    if (locals.user.role !== "ADMIN") {
-        error(404, {
-            message: "Nenalezeno"
-        });
+    // Tell TypeScript locals.user is not null
+    const user = locals.user!;
+
+    if (user.role !== "ADMIN") {
+        const fromUrl = url.pathname + url.search;
+        redirect(302, fromUrl, { type: "error", message: "Stránka nebyla nalezena" }, cookies);
     }
 
     const form = await superValidate(zod(userAccountSchema));
@@ -51,13 +52,11 @@ export const load = (async ({ locals }) => {
     const users = await db
         .select({
             user: userTable,
-            profile: profileTable,
-            companyName: companyTable.name
+            profile: profileTable
         })
         .from(userTable)
         .leftJoin(profileTable, eq(userTable.id, profileTable.userId))
-        .leftJoin(usersToCompaniesTable, eq(userTable.id, usersToCompaniesTable.userId))
-        .leftJoin(companyTable, eq(usersToCompaniesTable.companyId, companyTable.id));
+        .orderBy(asc(userTable.email));
 
     const invitedUsers = await db
         .select({
@@ -66,10 +65,10 @@ export const load = (async ({ locals }) => {
         })
         .from(registerInvitationTable)
         .leftJoin(companyTable, eq(registerInvitationTable.companyId, companyTable.id))
-        .where(isNull(registerInvitationTable.userId));
+        .orderBy(asc(registerInvitationTable.email));
 
     return {
-        user: locals.user,
+        user: user,
         form: form,
         companies: companies,
         users: users,
@@ -119,7 +118,8 @@ export const actions = {
                 expiresAt: createDate(new TimeSpan(14, "d")),
                 firstName: form.data.firstName,
                 lastName: form.data.lastName,
-                companyId: form.data.companyId
+                companyId: form.data.companyId,
+                companyRole: form.data.role
             });
 
         const verificationLink = `${WEBSITE_URL}/verify/${tokenId}`;

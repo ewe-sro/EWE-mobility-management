@@ -12,7 +12,21 @@
 
 	import { convertTimestampToDate } from '$lib/utils';
 
-	export let data;
+	type InvitedData = {
+		user: {
+			email: string;
+			firstName: string | null;
+			lastName: string | null;
+			companyId: number | null;
+			id: string;
+			createdAt: Date;
+			expiresAt: Date;
+			companyRole: string | null;
+		};
+		companyName: string | null;
+	}[];
+
+	export let data: InvitedData;
 	export let invitedUserLength: number;
 
 	const tableData = writable(data);
@@ -119,7 +133,7 @@
 			}
 		}),
 		table.column({
-			accessor: 'companyName',
+			accessor: (item) => item.companyName,
 			header: 'Společnost',
 			plugins: {
 				sort: {
@@ -178,7 +192,7 @@
 							<Subscribe attrs={cell.attrs()} let:attrs props={cell.props()} let:props>
 								<Table.Head
 									{...attrs}
-									class="group inline-flex items-center gap-1 h-auto mb-2 px-2 py-2 bg-slate-100 first:border-l last:border-r border-y
+									class="group inline-flex items-center gap-1 h-auto mb-2 px-2 py-2 bg-slate-100 dark:bg-slate-800 first:border-l last:border-r border-y
 									first:rounded-l-lg last:rounded-r-lg whitespace-nowrap"
 								>
 									{#if !props.sort.disabled}

@@ -4,6 +4,7 @@
 	import ChargerForm from '$lib/components/add-form/charger-form.svelte';
 	import ChargerCard from '$lib/components/cards/charger-card/charger-card.svelte';
 	import Keybinding from '$lib/components/keybinding/keybinding.svelte';
+	import TableSkeleton from '$lib/components/table-skeleton/table-skeleton.svelte';
 
 	export let data;
 
@@ -27,6 +28,10 @@
 	};
 </script>
 
+<svelte:head>
+	<title>Nabíjecí stanice – EMM</title>
+</svelte:head>
+
 <Keybinding key="n" bind:variable={dialogOpen} />
 
 <section class="py-16 ~px-4/8">
@@ -38,7 +43,6 @@
 				<ChargerForm
 					formObj={data.form}
 					companies={data.companies}
-					users={data.users}
 					keyIcon={true}
 					bind:dialogOpen
 				/>
@@ -46,36 +50,55 @@
 		</div>
 
 		<div class="flex flex-col gap-16">
-			{#key data.chargers}
-				{#each data.companies as company}
-					{#if company.chargerCount > 0}
-						<div class="flex flex-col gap-4">
-							<h3 class="text-xl font-semibold">{company.company.name}</h3>
-							<div class="grid grid-cols-2 gap-8">
-								{#each companyChargers as charger}
-									{#if company.company.id === charger.charger.companyId}
+			{#if data.chargers.length === 0}
+				<TableSkeleton />
+			{:else}
+				{#key data.chargers}
+					{#each data.companies as company}
+						{#if company.chargerCount > 0}
+							<div class="flex flex-col gap-4">
+								<h3 class="text-xl font-semibold">{company.company.name}</h3>
+								<div class="grid grid-cols-2 gap-8">
+									{#each companyChargers as charger}
+										{#if company.company.id === charger.charger.companyId}
+											<ChargerCard
+												on:chargerDeleted={handleChargerDelete}
+												data={charger}
+												user={data.user}
+											/>
+										{/if}
+									{/each}
+								</div>
+							</div>
+						{/if}
+					{/each}
+
+					{#if userChargers.length > 0}
+						{#each data.usersWithCharger as user}
+							{@const currentUserChargers = userChargers.filter(
+								(row) => row.charger.userId === user.user.id
+							)}
+
+							<div class="flex flex-col gap-4">
+								<h3 class="text-xl font-semibold">Ostatní</h3>
+								<div class="grid grid-cols-2 gap-8">
+									{#each currentUserChargers as charger}
 										<ChargerCard
 											on:chargerDeleted={handleChargerDelete}
 											data={charger}
 											user={data.user}
 										/>
-									{/if}
-								{/each}
+									{/each}
+								</div>
 							</div>
-						</div>
+						{/each}
 					{/if}
-				{/each}
 
-				{#if userChargers.length > 0}
-					{#each data.usersWithCharger as user}
-						{@const currentUserChargers = userChargers.filter(
-							(row) => row.charger.userId === user.user.id
-						)}
-
+					{#if otherChargers.length > 0}
 						<div class="flex flex-col gap-4">
-							<h3 class="text-xl font-semibold">Ostatní</h3>
+							<h3 class="text-xl font-semibold">Nepřiřazené</h3>
 							<div class="grid grid-cols-2 gap-8">
-								{#each currentUserChargers as charger}
+								{#each otherChargers as charger}
 									<ChargerCard
 										on:chargerDeleted={handleChargerDelete}
 										data={charger}
@@ -84,24 +107,9 @@
 								{/each}
 							</div>
 						</div>
-					{/each}
-				{/if}
-
-				{#if otherChargers.length > 0}
-					<div class="flex flex-col gap-4">
-						<h3 class="text-xl font-semibold">Nepřiřazené</h3>
-						<div class="grid grid-cols-2 gap-8">
-							{#each otherChargers as charger}
-								<ChargerCard
-									on:chargerDeleted={handleChargerDelete}
-									data={charger}
-									user={data.user}
-								/>
-							{/each}
-						</div>
-					</div>
-				{/if}
-			{/key}
+					{/if}
+				{/key}
+			{/if}
 		</div>
 	</div>
 </section>

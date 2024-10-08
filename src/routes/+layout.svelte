@@ -5,7 +5,7 @@
 	import FlashMessage from '$lib/components/flash-message/flash-message.svelte';
 </script>
 
-<!-- <ModeWatcher defaultMode={'light'} /> -->
+<ModeWatcher defaultMode={'light'} />
 <FlashMessage />
 
 <slot />

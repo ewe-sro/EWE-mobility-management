@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { source } from 'sveltekit-sse';
 
 	import * as Card from '$lib/components/ui/card';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
@@ -12,54 +12,36 @@
 
 	import { Ellipsis } from 'lucide-svelte';
 
-	import {
-		convertEnergyPower,
-		emptyStringOnNull,
-		convertSecondstoTime,
-		getDateDifference
-	} from '$lib/utils';
+	import { convertEnergyPower, emptyStringOnNull, convertSecondsToTime } from '$lib/utils';
 	import Separator from '$lib/components/ui/separator/separator.svelte';
 
-	export let data: any;
-	export let status;
+	import { cn } from '$lib/utils';
 
-	let apiData: any;
+	export let data: any;
+	export let status: 'unavailable' | 'offline' | 'online';
+
+	let className: string | undefined = undefined;
+	export { className as class };
+
+	const apiData = source(
+		`/api/charger/${data.charger.id}/controller/${data.controller.id}/charging-data`
+	).select('charging-data');
+
 	// if refreshed data from the API exists display it
 	// if not display the load function data
-	$: chargingData = !apiData ? data : apiData;
-
-	async function getChargingData() {
-		const response = await fetch(
-			`/api/charger/${data.charger.id}/controller/${data.controller.id}/get-charging-data`
-		);
-
-		apiData = await response.json();
-	}
-
-	let interval: NodeJS.Timeout;
-	onMount(() => {
-		getChargingData().then(() => {
-			// Set up interval to refresh data every 2 seconds
-			interval = setInterval(getChargingData, 2000);
-		});
-	});
-
-	// Clean up interval on component destroy
-	onDestroy(() => {
-		if (interval) {
-			clearInterval(interval);
-		}
-	});
+	$: chargingData = !$apiData ? data : JSON.parse($apiData);
 </script>
 
-<Card.Root class="flex flex-col gap-8 w-full p-8">
+<Card.Root class="flex flex-col gap-8 w-full p-8 {className}">
 	<Card.Header class="flex flex-row justify-between items-start gap-4 p-0 space-y-0">
 		<div class="flex flex-col items-start gap-1">
 			<Card.Title class="text-lg font-semibold"
 				>{chargingData.controller.chargingPointName}</Card.Title
 			>
 			<ControllerStatus
-				status={status === 'online' ? chargingData.controllerData?.connectedState : 'offline'}
+				connectedState={status === 'online'
+					? chargingData.controllerData?.connectedState
+					: 'offline'}
 			/>
 		</div>
 
@@ -72,7 +54,10 @@
 					class="actions group relative h-8 w-8 p-0"
 				>
 					<span class="sr-only">Otevřít menu</span>
-					<Ellipsis size="16" class="text-muted-foreground group-hover:text-black" />
+					<Ellipsis
+						size="16"
+						class="text-muted-foreground group-hover:text-black dark:group-hover:text-white"
+					/>
 				</Button>
 			</DropdownMenu.Trigger>
 			<DropdownMenu.Content align="end">
@@ -92,61 +77,56 @@
 		</DropdownMenu.Root>
 	</Card.Header>
 
-	{#if status !== 'unavailable'}
-		<Card.Content class="flex flex-col justify-center items-center gap-4 p-0">
-			{#if data.controllerData?.connectedState === 'connected'}
-				<ChargingDataContainer>
-					<ChargingDataName>Doba nabíjení</ChargingDataName>
-					<ChargingDataValue
-						>{convertSecondstoTime(chargingData.controllerData?.chargeTime)}</ChargingDataValue
-					>
-				</ChargingDataContainer>
-
-				<ChargingDataContainer>
-					<ChargingDataName>Doba připojení</ChargingDataName>
-					<ChargingDataValue
-						>{convertSecondstoTime(chargingData.controllerData?.connectedTime)}</ChargingDataValue
-					>
-				</ChargingDataContainer>
-
-				<ChargingDataContainer>
-					<ChargingDataName>Nabíjecí výkon</ChargingDataName>
-					<ChargingDataValue>
-						{emptyStringOnNull(convertEnergyPower(chargingData.controllerData?.realPower, 'W'))}
-					</ChargingDataValue>
-				</ChargingDataContainer>
-
-				<ChargingDataContainer>
-					<ChargingDataName>Nabíjecí relace</ChargingDataName>
-					<ChargingDataValue
-						>{convertEnergyPower(
-							chargingData.controllerData?.partEnergyRealPower,
-							'Wh'
-						)}</ChargingDataValue
-					>
-				</ChargingDataContainer>
-				<Separator />
-			{/if}
+	<Card.Content class="flex flex-col justify-center items-center gap-4 p-0">
+		{#if data.controllerData?.connectedState === 'connected' && status !== 'offline'}
 			<ChargingDataContainer>
-				<ChargingDataName>Celkem nabito</ChargingDataName>
+				<ChargingDataName>Doba nabíjení</ChargingDataName>
+				<ChargingDataValue
+					>{convertSecondsToTime(chargingData.controllerData?.chargeTime)}</ChargingDataValue
+				>
+			</ChargingDataContainer>
+
+			<ChargingDataContainer>
+				<ChargingDataName>Doba připojení</ChargingDataName>
+				<ChargingDataValue
+					>{convertSecondsToTime(chargingData.controllerData?.connectedTime)}</ChargingDataValue
+				>
+			</ChargingDataContainer>
+
+			<ChargingDataContainer>
+				<ChargingDataName>Nabíjecí výkon</ChargingDataName>
+				<ChargingDataValue>
+					{emptyStringOnNull(convertEnergyPower(chargingData.controllerData?.realPower, 'W'))}
+				</ChargingDataValue>
+			</ChargingDataContainer>
+
+			<ChargingDataContainer>
+				<ChargingDataName>Nabíjecí relace</ChargingDataName>
 				<ChargingDataValue
 					>{convertEnergyPower(
-						chargingData.controllerData?.energyRealPower,
+						chargingData.controllerData?.partEnergyRealPower,
 						'Wh'
 					)}</ChargingDataValue
 				>
 			</ChargingDataContainer>
-			{#if chargingData.controllerData?.connectedState === 'disconnected'}
-				<ChargingDataContainer>
-					<ChargingDataName>Poslední nabíjecí stanice</ChargingDataName>
-					<ChargingDataValue
-						>{convertEnergyPower(
-							chargingData.controllerData?.partEnergyRealPower,
-							'Wh'
-						)}</ChargingDataValue
-					>
-				</ChargingDataContainer>
-			{/if}
-		</Card.Content>
-	{/if}
+			<Separator />
+		{/if}
+		<ChargingDataContainer>
+			<ChargingDataName>Celkem nabito</ChargingDataName>
+			<ChargingDataValue
+				>{convertEnergyPower(chargingData.controllerData?.energyRealPower, 'Wh')}</ChargingDataValue
+			>
+		</ChargingDataContainer>
+		{#if chargingData.controllerData?.connectedState === 'disconnected' || status === 'offline'}
+			<ChargingDataContainer>
+				<ChargingDataName>Poslední nabíjecí relace</ChargingDataName>
+				<ChargingDataValue
+					>{convertEnergyPower(
+						chargingData.controllerData?.partEnergyRealPower,
+						'Wh'
+					)}</ChargingDataValue
+				>
+			</ChargingDataContainer>
+		{/if}
+	</Card.Content>
 </Card.Root>

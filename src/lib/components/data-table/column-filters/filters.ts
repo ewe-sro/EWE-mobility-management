@@ -19,8 +19,11 @@ export const stateFilter = ({ filterValue, value }: {
     return state === filterValue;
 };
 
-export const rangeFilter = ({ filterValue, value }) => {
-    if (!Array.isArray(filterValue) || typeof value !== 'object' || typeof value !== 'object') return true;
+export const rangeFilter = ({ filterValue, value }: {
+    filterValue: number[],
+    value: number
+}) => {
+    if (!Array.isArray(filterValue) || typeof value !== 'object') return true;
 
     const [min, max] = filterValue;
     if (min === null && max === null) return true;

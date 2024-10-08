@@ -10,6 +10,6 @@
 </script>
 
 <VisSingleContainer {data}>
-	<VisDonut {value} arcWidth={40} />
+	<VisDonut {value} radius={130} arcWidth={40} />
 	<VisTooltip triggers={{ [Donut.selectors.segment]: tooltipTemplate }} />
 </VisSingleContainer>

@@ -5,38 +5,25 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Separator } from '$lib/components/ui/separator';
 
-	import { TriangleAlert, Trash2 } from 'lucide-svelte';
-
 	import AddFormButton from './add-form-button.svelte';
 	import SubmitLoader from './misc/submit-loader.svelte';
+	import FormMessage from '$lib/components/form-message/form-message.svelte';
 
 	import { superForm } from 'sveltekit-superforms';
-	import SuperDebug from 'sveltekit-superforms';
 
-	export let data: any;
+	export let formObj;
 	export let dialogOpen: boolean;
 
-	const form = superForm(data.form);
-	const { form: formData, message, delayed, enhance } = form;
+	const form = superForm(formObj);
+	const { form: formData, message, delayed, errors, enhance } = form;
 
-	// Used for resetting the logo file upload after submit/dialog close
-	const resetLogoUpload = () => {
-		uploadedImage = undefined;
-		$formData.logo = undefined;
-	};
-
-	// Used for closing the dialog
-	const closeDialog = () => {
-		resetLogoUpload();
-
-		dialogOpen = false;
-	};
-
-	async function loadAres() {
+	const loadAres = async () => {
+		// Call ARES API to get company data from ICO
 		const requestUrl = `https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/${$formData.ic}`;
 		const response = await fetch(requestUrl);
 
-		if (response.status == 200) {
+		if (response.status === 200) {
+			// STATUS 200: valid data => fill the form
 			const companyData = await response.json();
 
 			$formData.name = companyData['obchodniJmeno'];
@@ -44,23 +31,18 @@
 			$formData.city = companyData['sidlo']['nazevObce'];
 			$formData.zip = `${companyData['sidlo']['psc']}`;
 
-			// Check if DIC was returned
+			// Check if DIC was returned, if so fill the DIC input
 			if (companyData['dic']) {
 				$formData.dic = companyData['dic'];
 			}
+		} else if (response.status === 400) {
+			// STATUS 400: invalid input => error
+			$errors.ic = ['Zadejte prosím platné IČO.'];
+		} else {
+			// OTHER ERRORS: error => error
+			$errors.ic = ['Data ze serveru se nepodařilo získat.'];
 		}
-	}
-
-	let uploadedImage: string | undefined;
-
-	function handleImageUpload(e: Event) {
-		const image = (e.target as HTMLInputElement)?.files?.[0];
-
-		if (!image) return;
-
-		// Return the object for the preview image source
-		uploadedImage = URL.createObjectURL(image);
-	}
+	};
 </script>
 
 <Dialog.Root bind:open={dialogOpen}>
@@ -173,41 +155,7 @@
 				<Form.FieldErrors />
 			</Form.Field>
 
-			<!--
-			<Form.Field {form} name="logo">
-				<Form.Control let:attrs>
-					<Form.Label>Logo</Form.Label>
-					<div class="flex gap-2">
-						<Input
-							{...attrs}
-							bind:value={$formData.logo}
-							on:change={handleImageUpload}
-							type="file"
-							accept="image/*"
-							class="focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
-						/>
-						<Button
-							on:click={resetLogoUpload}
-							variant="outline"
-							class="h-10 aspect-square p-1.5 text-muted-foreground hover:text-black"
-						>
-							<Trash2 size="18" />
-						</Button>
-					</div>
-				</Form.Control>
-				<Form.FieldErrors />
-			</Form.Field> -->
-
-			{#if uploadedImage}
-				<img src={uploadedImage} style="max-width: 50ch;" alt={$formData.name} />
-			{/if}
-
-			{#if $message}
-				<span class="inline-flex items-center gap-1 text-sm text-destructive font-medium">
-					<TriangleAlert size="16" />
-					{$message}
-				</span>
-			{/if}
+			<FormMessage message={$message} />
 		</form>
 
 		<Dialog.Footer class="!flex-col">

@@ -10,6 +10,7 @@
 	import CompanyCombobox from './misc/company-combobox.svelte';
 	import RoleSelect from './misc/role-select.svelte';
 	import SubmitLoader from './misc/submit-loader.svelte';
+	import FormMessage from '$lib/components/form-message/form-message.svelte';
 
 	export let data: any;
 	export let dialogOpen: boolean;
@@ -105,12 +106,7 @@
 				<RoleSelect {form} bind:formData={$formData} />
 			{/if}
 
-			{#if $message}
-				<span class="inline-flex items-center gap-1 text-sm text-destructive font-medium">
-					<TriangleAlert size="16" />
-					{$message}
-				</span>
-			{/if}
+			<FormMessage message={$message} />
 		</form>
 
 		<Dialog.Footer class="!flex-col">

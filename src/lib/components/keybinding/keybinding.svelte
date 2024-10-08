@@ -13,7 +13,13 @@
 		// desired bound keys are pressed.
 		switch (event.key) {
 			case key:
-				if (!variable) {
+				const activeElement = document.activeElement;
+
+				if (
+					!variable &&
+					activeElement?.tagName !== 'INPUT' &&
+					activeElement?.tagName !== 'TEXTAREA'
+				) {
 					variable = true;
 
 					event.preventDefault();

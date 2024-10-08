@@ -37,7 +37,7 @@ export const RegisterEmail = ({
 
             <Text className={emailStyles.text}>
                 V registraci pokračujte ověřením e-mailové adresy, vytvořením uživatelského účtu a vyplněním
-				kontaktních údajů po kliknutí na tlačítko níže.
+				kontaktních údajů po kliknutí na tlačítko.
             </Text>
           </Container>
           <Text className={emailStyles.footerText}>© EWE s.r.o., Třebovská 570, 562 03 Ústí nad Orlicí</Text>

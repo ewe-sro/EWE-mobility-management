@@ -80,11 +80,20 @@ export const convertTimestampToDate = (timestamp: string | any, type: "datetime"
     const timezoneOffset = getTimezoneOffset();
 
     // Extract date components
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1; // Months are zero-indexed, so add 1
-    const day = date.getDate();
-    const hour = date.getUTCHours() + timezoneOffset;
+    let year = date.getFullYear();
+    let month = date.getMonth() + 1; // Months are zero-indexed, so add 1
+    let day = date.getDate();
+    let hour = date.getUTCHours() + timezoneOffset;
     const minutes = date.getMinutes();
+
+    // Adjust for day rollover
+    if (hour >= 24) {
+        hour -= 24;
+        date.setUTCDate(date.getUTCDate() + 1);
+        day = date.getUTCDate();
+        month = date.getUTCMonth() + 1;
+        year = date.getUTCFullYear();
+    }
 
     // Construct the date string in desired format
     let formattedDate
@@ -133,14 +142,10 @@ export const emptyStringOnNull = (value: string | number | null | undefined) => 
 }
 
 
-export const convertSecondstoTime = (givenSeconds: number | null) => {
+export const convertSecondsToTime = (givenSeconds: number | null): string => {
     if (givenSeconds === null) {
         return "";
     }
-
-    // Calculate days
-    const days = Math.floor(givenSeconds / (24 * 3600));
-    givenSeconds %= 24 * 3600;
 
     // Calculate hours
     const hours = Math.floor(givenSeconds / 3600);
@@ -149,8 +154,8 @@ export const convertSecondstoTime = (givenSeconds: number | null) => {
     // Calculate minutes
     const minutes = Math.floor(givenSeconds / 60);
 
-    // Calculate remaining givenSeconds
-    const remainingSeconds = givenSeconds % 60;
+    // Calculate remaining seconds
+    const remainingSeconds = round(givenSeconds % 60, 0);
 
     // Format time components to ensure two digits
     const formattedHours = String(hours).padStart(2, '0');
@@ -158,16 +163,36 @@ export const convertSecondstoTime = (givenSeconds: number | null) => {
     const formattedSeconds = String(remainingSeconds).padStart(2, '0');
 
     // Construct the time string
-    let timeString = `${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
-
-    // Add days to the time string if there are any
-    if (days > 0) {
-        timeString = `${days} ${days > 1 ? 'dny' : 'den'} ${timeString}`;
-    }
-
-    return timeString;
+    return `${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
 }
 
+export const convertTimeToSeconds = (timeString: string) => {
+    // Regular expression to match the different time formats
+    const regex = /^(?:(\d+)\s*(?:days?|d),?\s*)?(?:(\d+):)?(\d+):(\d+)$/;
+    const match = timeString.match(regex);
+
+    if (!match) {
+        return;
+    }
+
+    // Remove the full match from the array
+    const [, ...parts] = match;
+
+    // Pad the array with zeros at the beginning if necessary
+    while (parts.length < 4) {
+        parts.unshift('0');
+    }
+
+    const [days, hours, minutes, seconds] = parts.map(part => parseInt(part) || 0);
+
+    // Convert everything to seconds and sum up
+    return (
+        days * 86400 +    // 24 * 60 * 60
+        hours * 3600 +    // 60 * 60
+        minutes * 60 +
+        seconds
+    );
+}
 
 export const convertEnergyPower = (value: number, unit: "Wh" | "W") => {
     let realPowerCalc;
@@ -223,18 +248,24 @@ export const exportCsv = (data: any) => {
     URL.revokeObjectURL(url);
 };
 
-export const getChargerStatus = (lastConnected: string | any): string | "unavailable" | "offline" | "online" => {
-    let status;
-
+export const getChargerStatus = (lastConnected: string | any): "unavailable" | "offline" | "online" => {
     if (!lastConnected) {
-        status = 'unavailable';
+        return 'unavailable';
     } else if (getDateDifference(lastConnected) > 3 * 60) {
-        status = 'offline';
+        return 'offline';
     } else {
-        status = 'online';
+        return 'online';
     }
+}
 
-    return status;
+export const getControllerStatus = (connectedState: string | any): "offline" | "disconnected" | "connected" => {
+    if (connectedState === "disconnected") {
+        return 'disconnected';
+    } else if (connectedState === "connected") {
+        return 'connected';
+    } else {
+        return "offline";
+    }
 }
 
 export const isEmptyNullOrUndefined = (value: any) => {
@@ -246,7 +277,7 @@ export const isBetweenDates = (startTimestamp: Date, endTimestamp: Date, targetT
     return targetTimestamp >= startTimestamp && targetTimestamp <= endTimestamp;
 }
 
-// convert an Array of data
+// convert an Array of data to CSV file
 export const getCsvFromData = (data: any[]) => {
     // Get the keys from the first object to use as the header
     const headers = Object.keys(data[0]);
@@ -270,3 +301,75 @@ export const getCsvFromData = (data: any[]) => {
     const csvString = [headers.join(','), ...csvRows].join('\n');
     return csvString;
 };
+
+export const formatBytes = (bytes: number) => {
+    if (bytes < 1024) {
+        return bytes + " B";
+    } else if (bytes < 1048576) {
+        return round(bytes / 1024, 1) + " KB";
+    } else {
+        return round(bytes / 1048576, 1) + " MB";
+    }
+}
+
+export const getFilenameAndExtension = (fullFilename: string) => {
+    // Find the position of the last dot
+    const lastDotIndex = fullFilename.lastIndexOf('.');
+
+    // If there's no dot or the dot is at the start, return the whole string as filename and empty extension
+    if (lastDotIndex === -1 || lastDotIndex === 0) {
+        return { filename: fullFilename, extension: '' };
+    }
+
+    // Extract the filename and extension
+    const filename = fullFilename.slice(0, lastDotIndex);
+    const extension = fullFilename.slice(lastDotIndex + 1);
+
+    return { filename, extension };
+}
+
+export const csvToArrayOfArrays = (data: string | ArrayBuffer | null) => {
+    if (typeof data !== "string") return false;
+
+    const output = [];
+
+    // Convert the CSV string to array
+    const rows = data.split("\n");
+
+    for (let i = 0; i < rows.length; i++) {
+        const cells = rows[i].split(",");
+        output.push(cells);
+    }
+
+    return output;
+}
+
+export const csvToArrayOfObjects = (data: string | ArrayBuffer | null) => {
+    if (typeof data !== "string") return false;
+
+    const output = [];
+
+    // Replace all \r characters (end of lines) with an empty string
+    const cleanedData = data.replace(/\r/g, '');
+
+    // Convert the CSV string to array
+    const rows = cleanedData.split("\n");
+
+    // Get the column names from the first row of the data
+    const headers = rows[0].split(',');
+
+    // Loop over the data and skip the header row
+    for (let i = 1; i < rows.length; i++) {
+        const cells = rows[i].split(",");
+
+        let obj: any = {};
+        for (let j = 0; j < cells.length; j++) {
+            obj[headers[j]] = cells[j];
+        }
+
+        output.push(obj);
+    }
+
+    console.log(output);
+    return output;
+}

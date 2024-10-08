@@ -57,7 +57,7 @@
 			</DropdownMenu.Item>
 			<DropdownMenu.Item
 				on:click={() => deleteInvitation(id)}
-				class="text-destructive font-medium hover:bg-red-100 hover:text-destructive"
+				class="text-red-500 hover:text-red-500 dark:hover:text-white font-medium hover:bg-red-100 dark:hover:bg-red-500"
 			>
 				Zrušit platnost pozvánky
 			</DropdownMenu.Item>

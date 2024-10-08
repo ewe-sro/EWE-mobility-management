@@ -15,6 +15,10 @@
 	let dialogOpen = false;
 </script>
 
+<svelte:head>
+	<title>Nástroje správce – EMM</title>
+</svelte:head>
+
 <Keybinding key="n" bind:variable={dialogOpen} />
 
 <section class="py-16 ~px-4/8">

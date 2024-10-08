@@ -6,6 +6,7 @@ services:
       dockerfile: Dockerfile
     environment:
       - ORIGIN=https://app.ewe.cz
+      - NODE_OPTIONS=--max_old_space_size=4096
     extra_hosts:
       - "host.docker.internal:host-gateway"
       - "ms.ewe.cz:192.168.1.227"

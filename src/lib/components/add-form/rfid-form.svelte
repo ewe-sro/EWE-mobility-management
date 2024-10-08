@@ -5,6 +5,8 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Separator } from '$lib/components/ui/separator';
 
+	import FormMessage from '$lib/components/form-message/form-message.svelte';
+
 	import { TriangleAlert, Plus } from 'lucide-svelte';
 
 	import { superForm } from 'sveltekit-superforms';
@@ -30,6 +32,7 @@ active:ring-2 active:ring-offset-0 active:ring-primary/30 active:border-primary/
 			<Dialog.Title>Přidat RFID</Dialog.Title>
 			<Separator />
 		</Dialog.Header>
+
 		<form
 			id="otherRfidForm"
 			class="flex flex-col gap-6"
@@ -70,12 +73,7 @@ active:ring-2 active:ring-offset-0 active:ring-primary/30 active:border-primary/
 				<Form.FieldErrors />
 			</Form.Field>
 
-			{#if $message}
-				<span class="inline-flex items-center gap-1 text-sm text-destructive font-medium">
-					<TriangleAlert size="16" />
-					{$message}
-				</span>
-			{/if}
+			<FormMessage message={$message} />
 		</form>
 
 		<Dialog.Footer class="!flex-col">

@@ -2,8 +2,7 @@ import { relations, sql } from "drizzle-orm";
 
 // Import data types
 import {
-    integer, decimal, pgTable, serial, varchar, text, timestamp, primaryKey,
-    boolean
+    integer, decimal, pgTable, serial, varchar, text, timestamp, primaryKey
 } from "drizzle-orm/pg-core";
 
 // Define database tables
@@ -34,6 +33,7 @@ export const chargingControllerTable = pgTable("charging_controller", {
 
 export const controllerDataTable = pgTable("controller_data", {
     id: serial("id").primaryKey(),
+    iec61851State: varchar("iec_61851_state", { length: 20 }),
     connectedState: varchar("connected_state", { length: 20 }),
     apparentEnergy: decimal("apparent_energy"),
     energyRealPower: decimal("energy_real_power"),
@@ -191,8 +191,7 @@ export const registerInvitationTable = pgTable("register_invitation", {
     firstName: varchar("first_name", { length: 50 }),
     lastName: varchar("last_name", { length: 50 }),
     companyId: integer("company_id").references(() => companyTable.id),
-    userId: text("user_id")
-        .references(() => userTable.id, { onDelete: 'cascade' }),
+    companyRole: varchar("company_role", { length: 50 }),
     createdAt: timestamp("created_at", {
         withTimezone: false,
         mode: "date"
@@ -201,4 +200,10 @@ export const registerInvitationTable = pgTable("register_invitation", {
         withTimezone: false,
         mode: "date"
     }).notNull()
+});
+
+export const companyFollowTable = pgTable("company_follow", {
+    id: serial("id").primaryKey(),
+    companyId: integer("company_id").notNull().references(() => companyTable.id, { onDelete: 'cascade' }),
+    userId: text("user_id").notNull().references(() => userTable.id, { onDelete: 'cascade' }),
 });

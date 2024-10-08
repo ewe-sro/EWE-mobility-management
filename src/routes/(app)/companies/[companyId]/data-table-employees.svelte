@@ -10,7 +10,16 @@
 	import DataTableActions from './data-table-actions-employees.svelte';
 	import DataTableSort from '$lib/components/data-table/controls/data-table-sort.svelte';
 
-	export let data;
+	type EmployeeData = {
+		id: string;
+		email: string;
+		firstName: string | null;
+		lastName: string | null;
+		role: string | null;
+		rfidTag: string | null;
+	}[];
+
+	export let data: EmployeeData;
 	export let rfidForm;
 	export let employeeForm;
 
@@ -157,7 +166,7 @@
 							<Subscribe attrs={cell.attrs()} let:attrs props={cell.props()} let:props>
 								<Table.Head
 									{...attrs}
-									class="group inline-flex items-center gap-1 h-auto mb-2 px-2 py-2 bg-slate-100 first:border-l last:border-r border-y
+									class="group inline-flex items-center gap-1 h-auto mb-2 px-2 py-2 bg-slate-100 dark:bg-slate-800 first:border-l last:border-r border-y
 									first:rounded-l-lg last:rounded-r-lg whitespace-nowrap"
 								>
 									{#if !props.sort.disabled}

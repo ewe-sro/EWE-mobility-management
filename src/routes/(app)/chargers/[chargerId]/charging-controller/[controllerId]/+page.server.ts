@@ -14,10 +14,12 @@ import {
     rfidTagTable
 } from "$lib/server/db/schema";
 
-export const load = async ({ locals, params, cookies }) => {
-    const user = locals.user;
+export const load = async ({ parent, locals, params, cookies }) => {
+    // Wait for the +layout.server.ts load function for route protection
+    await parent();
 
-    if (!user) redirect(303, "/login");
+    // Tell TypeScript locals.user is not null
+    const user = locals.user!;
 
     const [controller] = await db
         .select({
@@ -42,6 +44,8 @@ export const load = async ({ locals, params, cookies }) => {
             )
         );
 
+    // If the controller was not found or the user doesn't have the required permissions
+    // redirect them to '/chargers'
     if (!controller || !chargerPermission && user.role != "ADMIN") redirect(303, "/chargers", { type: "error", message: "Nabíjecí bod nebyl nalezen" }, cookies);
 
     // Subquery for getting the employee with the RFID of the charging session
@@ -88,50 +92,47 @@ export const load = async ({ locals, params, cookies }) => {
         );
 
 
-    let chargingSessions;
+    let chargingSessions: any[];
 
-    if (userInCompany.role !== "Host") {
-        chargingSessions = await db
-            .select({
-                chargingSession: chargingSessionTable,
-                controller: chargingControllerTable,
-                charger: chargerTable,
-                employee: sqRfidEmployee.employee,
-                rfidDescription: sqRfid.description
-            })
-            .from(chargingSessionTable)
-            .leftJoin(chargingControllerTable, eq(chargingSessionTable.controllerId, chargingControllerTable.id))
-            .leftJoin(chargerTable, eq(chargingControllerTable.chargerId, chargerTable.id))
-            .leftJoin(sqRfidEmployee, eq(chargingSessionTable.id, sqRfidEmployee.chargingSessionId))
-            .leftJoin(sqRfid, eq(chargingSessionTable.id, sqRfid.chargingSessionId))
-            .where(eq(chargingSessionTable.controllerId, params.controllerId))
-            .orderBy(desc(chargingSessionTable.startTimestamp));
-    } else {
-        chargingSessions = await db
-            .select({
-                chargingSession: chargingSessionTable,
-                controller: chargingControllerTable,
-                charger: chargerTable,
-                employee: sqRfidEmployee.employee,
-                rfidDescription: sqRfid.description
-            })
-            .from(chargingSessionTable)
-            .leftJoin(chargingControllerTable, eq(chargingSessionTable.controllerId, chargingControllerTable.id))
-            .leftJoin(chargerTable, eq(chargingControllerTable.chargerId, chargerTable.id))
-            .leftJoin(sqRfidEmployee, eq(chargingSessionTable.id, sqRfidEmployee.chargingSessionId))
-            .leftJoin(sqRfid, eq(chargingSessionTable.id, sqRfid.chargingSessionId))
+    const sessionQuery = db
+        .select({
+            chargingSession: chargingSessionTable,
+            controller: chargingControllerTable,
+            charger: chargerTable,
+            employee: sqRfidEmployee.employee,
+            rfidDescription: sqRfid.description
+        })
+        .from(chargingSessionTable)
+        .leftJoin(chargingControllerTable, eq(chargingSessionTable.controllerId, chargingControllerTable.id))
+        .leftJoin(chargerTable, eq(chargingControllerTable.chargerId, chargerTable.id))
+        .leftJoin(sqRfidEmployee, eq(chargingSessionTable.id, sqRfidEmployee.chargingSessionId))
+        .leftJoin(sqRfid, eq(chargingSessionTable.id, sqRfid.chargingSessionId))
+        .where(eq(chargingSessionTable.controllerId, params.controllerId))
+        .orderBy(desc(chargingSessionTable.startTimestamp))
+        .$dynamic();
+
+    if (userInCompany?.role !== "Host") {
+        // If the user is not an employee (is ADMIN) of the company
+        // select all of the controller's charging sessions
+        chargingSessions = await sessionQuery;
+
+    } else if (userInCompany.rfidTag) {
+        chargingSessions = await sessionQuery
             .where(
                 and(
                     eq(chargingSessionTable.controllerId, params.controllerId),
                     eq(chargingSessionTable.rfidTag, userInCompany.rfidTag)
                 )
-            )
-            .orderBy(desc(chargingSessionTable.startTimestamp));
+            );
+    } else {
+        chargingSessions = [];
     }
 
 
     return {
-        controller: controller,
-        chargingSessions: chargingSessions
+        user,
+        userInCompany,
+        controller,
+        chargingSessions
     }
 }

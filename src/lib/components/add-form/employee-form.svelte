@@ -3,6 +3,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Separator } from '$lib/components/ui/separator';
 
+	import FormMessage from '$lib/components/form-message/form-message.svelte';
 	import UserCombobox from './misc/user-combobox.svelte';
 	import RoleSelect from './misc/role-select.svelte';
 
@@ -34,8 +35,6 @@ active:ring-2 active:ring-offset-0 active:ring-primary/30 active:border-primary/
 			<Separator />
 		</Dialog.Header>
 
-		<SuperDebug data={$formData} />
-
 		<form
 			id="inviteUserForm"
 			class="flex flex-col gap-6"
@@ -46,12 +45,7 @@ active:ring-2 active:ring-offset-0 active:ring-primary/30 active:border-primary/
 			<UserCombobox {form} bind:formData={$formData} {users} bind:comboboxOpen />
 			<RoleSelect {form} bind:formData={$formData} />
 
-			{#if $message}
-				<span class="inline-flex items-center gap-1 text-sm text-destructive font-medium">
-					<TriangleAlert size="16" />
-					{$message}
-				</span>
-			{/if}
+			<FormMessage message={$message} />
 		</form>
 
 		<Dialog.Footer class="!flex-col">
@@ -61,16 +55,16 @@ active:ring-2 active:ring-offset-0 active:ring-primary/30 active:border-primary/
 					on:click={() => (dialogOpen = false)}
 					variant="ghost"
 					class="h-auto px-2 py-1.5 text-sm
-                active:ring-2 active:ring-offset-0 active:ring-accent/30 active:border-accent/70
-            focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-accent/30 focus-visible:border-accent/70"
+                	active:ring-2 active:ring-offset-0 active:ring-accent/30 active:border-accent/70
+            		focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-accent/30 focus-visible:border-accent/70"
 					>Zrušit</Button
 				>
 				<Button
 					type="submit"
 					form="inviteUserForm"
 					class="flex items-center gap-1.5 h-auto px-2 py-1.5 bg-primary text-sm text-white font-medium rounded-md hover:bg-primary/90
-            active:ring-2 active:ring-offset-0 active:ring-primary/30 active:border-primary/70
-            focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
+            		active:ring-2 active:ring-offset-0 active:ring-primary/30 active:border-primary/70
+            		focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
 					>Přidat zaměstnance</Button
 				>
 			</div>

@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { Button } from '../ui/button';
-
 	import { Home, PlugZap, Shield, Factory } from 'lucide-svelte';
 
 	import SidebarLogo from './sidebar-logo/sidebar-logo.svelte';
@@ -12,7 +10,7 @@
 	export let profile: any;
 </script>
 
-<div class="flex-shrink-0 sticky top-0 flex flex-col justify-between h-screen w-full max-w-xs p-4">
+<div class="sticky top-0 flex flex-col justify-between h-screen w-full max-w-xs p-4">
 	<div
 		class="flex flex-col justify-between h-full pt-6 pb-4 px-4 bg-white dark:bg-slate-950 border border-border rounded-md shadow-sm"
 	>

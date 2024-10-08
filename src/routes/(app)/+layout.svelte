@@ -1,5 +1,4 @@
 <script lang="ts">
-	import Header from '$lib/components/header/header.svelte';
 	import Sidebar from '$lib/components/sidebar/sidebar.svelte';
 
 	export let data;

@@ -6,8 +6,7 @@ export const userSchema = z.object({
         .string()
         .email({ message: "Zadejte prosím platný email" })
         .trim()
-        .toLowerCase()
-        .min(1, { message: "E-mail je povinná hodnota" }),
+        .toLowerCase(),
     password: z
         .string()
         .trim()
@@ -148,5 +147,15 @@ export const otherRfidSchema = z.object({
         .nullish(),
     description: z
         .string()
+        .nullish()
+});
+
+export const importCsvSchema = z.object({
+    file: z
+        .custom<File>()
+        .refine((file) => file?.size <= 200000, "Maximální velikost souboru je 1 MB")
+        .refine((file) => !file || (!!file && file.type?.startsWith("image")), {
+            message: "Pouze obrázkové formáty jsou povoleny"
+        })
         .nullish()
 });

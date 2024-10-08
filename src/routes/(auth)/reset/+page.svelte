@@ -4,35 +4,39 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 
-	import { TriangleAlert } from 'lucide-svelte';
+	import FormMessage from '$lib/components/form-message/form-message.svelte';
 
-	import { superForm } from 'sveltekit-superforms';
+	import SuperDebug, { superForm } from 'sveltekit-superforms';
 
 	export let data;
 
-	const form = superForm(data.form, {
-		resetForm: false
-	});
-	const { form: formData, message, enhance } = form;
-
 	// form steps
-	let emailSubmitted = false;
+	let formStep: 'form' | 'info' = 'form';
+
+	const form = superForm(data.form, {
+		resetForm: false,
+		onResult({ result }) {
+			if (result.status === 200) {
+				formStep = 'info';
+			}
+		}
+	});
+	const { form: formData, message, enhance, submit } = form;
 </script>
 
-{#if !emailSubmitted}
-	<Card.Header class="space-y-4 p-0 pb-8">
+<svelte:head>
+	<title>Resetovat heslo – EMM</title>
+</svelte:head>
+
+{#if formStep === 'form'}
+	<Card.Header class="p-0 pb-8">
 		<Card.Title tag="h1" class="text-2xl font-bold">Resetovat heslo</Card.Title>
 		<Card.Description
 			>Zadejte e-mail, pod kterým jste se registrovali a my vám zašleme odkaz pro resetování hesla.</Card.Description
 		>
 	</Card.Header>
 
-	<form
-		method="POST"
-		use:enhance
-		class="flex flex-col gap-4"
-		on:submit={() => (emailSubmitted = true)}
-	>
+	<form method="POST" use:enhance class="flex flex-col gap-4">
 		<div class="flex flex-col gap-1">
 			<Form.Field {form} name="email">
 				<Form.Control let:attrs>
@@ -47,12 +51,7 @@
 				<Form.FieldErrors />
 			</Form.Field>
 
-			{#if $message}
-				<div class="flex items-center gap-2 text-sm text-destructive font-medium">
-					<TriangleAlert size="16" />
-					<span>{$message}</span>
-				</div>
-			{/if}
+			<FormMessage message={$message} />
 		</div>
 
 		<Form.Button
@@ -63,7 +62,7 @@
 			Zpět na přihlášení
 		</Button>
 	</form>
-{:else}
+{:else if formStep === 'info'}
 	<Card.Header class="space-y-4 p-0">
 		<Card.Title tag="h1" class="text-2xl font-bold">Zkontrolujte svůj email</Card.Title>
 		<Card.Description
@@ -72,13 +71,11 @@
 		>
 		<Card.Description
 			>Pokud jste e-mail neobdrželi do 5 minut, zkontrolujte spam,
-			<Button variant="link" class="h-auto p-0 hover:no-underline hover:text-black"
-				>odešlete jej znovu</Button
-			> nebo <Button
+			<Button
 				variant="link"
 				class="h-auto p-0 hover:no-underline hover:text-black"
-				on:click={() => (emailSubmitted = false)}>zkuste jiný e-mail</Button
-			>.
+				on:click={() => (formStep = 'form')}>vyzkoušejte jiný e-mail</Button
+			> nebo to zkuste prosím později.
 		</Card.Description>
 	</Card.Header>
 {/if}

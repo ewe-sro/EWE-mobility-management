@@ -2,6 +2,7 @@
 	import { page } from '$app/stores';
 	import { createEventDispatcher } from 'svelte';
 
+	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import { Button } from '$lib/components/ui/button';
 
@@ -20,6 +21,8 @@
 
 	export let user;
 	export let userInCompany;
+
+	let deleteDialogOpen = false;
 
 	// Controls the RFID dialog
 	let rfidDialogOpen = false;
@@ -63,8 +66,9 @@
 					class="text-muted-foreground font-medium">Nastavit RFID</DropdownMenu.Item
 				>
 				<DropdownMenu.Item
-					on:click={() => deleteEmployee(id)}
-					class="text-destructive font-medium hover:bg-red-100 hover:text-destructive"
+					on:click={() => (deleteDialogOpen = true)}
+					disabled={id === userInCompany?.userId ? true : false}
+					class="text-red-500 hover:text-red-500 dark:hover:text-white font-medium hover:bg-red-100 dark:hover:bg-red-500"
 				>
 					Odstranit zaměstnance
 				</DropdownMenu.Item>
@@ -74,4 +78,25 @@
 
 	<RfidForm {id} formObj={rfidForm} {employee} bind:dialogOpen={rfidDialogOpen} />
 	<RoleForm {id} formObj={employeeForm} {employee} bind:dialogOpen={employeeDialogOpen} />
+
+	<!-- DELETE DIALOG -->
+	<AlertDialog.Root bind:open={deleteDialogOpen}>
+		<AlertDialog.Content>
+			<AlertDialog.Header>
+				<AlertDialog.Title>Jste si jisti, že chcete odebrat tohoto zaměstnance?</AlertDialog.Title>
+				<AlertDialog.Description>
+					Tuto akci nelze vzít zpět. Dojde k odebrání zaměstnance ze společnosti a uživatel si již
+					nebude moct zobrazit žádná data této společnosti.
+				</AlertDialog.Description>
+			</AlertDialog.Header>
+			<AlertDialog.Footer>
+				<AlertDialog.Cancel>Zrušit</AlertDialog.Cancel>
+				<AlertDialog.Action
+					on:click={() => deleteEmployee(id)}
+					class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+					>Smazat</AlertDialog.Action
+				>
+			</AlertDialog.Footer>
+		</AlertDialog.Content>
+	</AlertDialog.Root>
 </ShowToAdminsAndManagers>

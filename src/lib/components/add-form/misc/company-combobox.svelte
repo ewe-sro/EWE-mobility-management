@@ -8,11 +8,15 @@
 
 	import { ChevronsUpDown, Check } from 'lucide-svelte';
 
+	import { cn } from '$lib/utils';
+
 	export let form;
 	export let formData;
 	export let companies;
 	export let comboboxOpen: boolean;
 	export let label = true;
+
+	export let align: 'left' | 'center' = 'center';
 
 	let className: undefined | string = undefined;
 	export { className as class };
@@ -40,7 +44,10 @@
 				<Button
 					builders={[builder]}
 					variant="outline"
-					class="items-center gap-1 w-full focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
+					class={cn(
+						'items-center gap-1 w-full focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70',
+						align === 'left' && 'justify-start px-3 font-normal'
+					)}
 				>
 					{#if selectedCompany}
 						{selectedCompany.company.name}

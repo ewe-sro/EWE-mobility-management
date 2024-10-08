@@ -7,12 +7,28 @@
 
 	import * as Table from '$lib/components/ui/table';
 
+	import StatusDot from '$lib/components/charging-status/status-dot/status-dot.svelte';
+
 	import DataTableActions from './data-table-actions-chargers.svelte';
 	import DataTableSort from '$lib/components/data-table/controls/data-table-sort.svelte';
 
-	export let data;
+	import { getChargerStatus } from '$lib/utils';
+
+	type ChargerData = {
+		charger: {
+			name: string;
+			id: number;
+			userId: string | null;
+			description: string | null;
+			companyId: number | null;
+			apiKey: string | null;
+			lastConnected: Date | null;
+		};
+		controllerCount: number;
+	}[];
+
+	export let data: ChargerData;
 	export let user;
-	export let userInCompany;
 
 	const tableData = writable(data);
 	const table = createTable(tableData, {
@@ -46,6 +62,21 @@
 			plugins: {
 				sort: {
 					disable: false
+				}
+			}
+		}),
+		table.column({
+			accessor: (item) => item.charger.lastConnected,
+			id: 'state',
+			header: 'Stav',
+			cell: ({ value }) => {
+				return createRender(StatusDot, {
+					variant: getChargerStatus(value)
+				});
+			},
+			plugins: {
+				sort: {
+					disable: true
 				}
 			}
 		}),
@@ -85,9 +116,8 @@
 			header: '',
 			cell: ({ value }) => {
 				return createRender(DataTableActions, {
-					id: value,
-					user: user,
-					userInCompany: userInCompany
+					id: value.toString(),
+					user: user
 				}).on('chargerDeleted', handleChargerDelete);
 			},
 			plugins: {
@@ -132,7 +162,7 @@
 							<Subscribe attrs={cell.attrs()} let:attrs props={cell.props()} let:props>
 								<Table.Head
 									{...attrs}
-									class="group inline-flex items-center gap-1 h-auto mb-2 px-2 py-2 bg-slate-100 first:border-l last:border-r border-y
+									class="group inline-flex items-center gap-1 h-auto mb-2 px-2 py-2 bg-slate-100 dark:bg-slate-800 first:border-l last:border-r border-y
 									first:rounded-l-lg last:rounded-r-lg whitespace-nowrap"
 								>
 									{#if !props.sort.disabled}

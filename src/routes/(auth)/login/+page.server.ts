@@ -24,7 +24,7 @@ export const load = (async () => {
 });
 
 export const actions = {
-    default: async ({ request, cookies }) => {
+    default: async ({ request, url, cookies }) => {
         // get form data and validate them
         const form = await superValidate(request, zod(loginSchema));
 
@@ -65,7 +65,15 @@ export const actions = {
         // Login the user
         await createAndSetSession(lucia, existingUser.id, cookies);
 
-        // redirect to /
-        throw redirect(303, "/dashboard");
+        // Get the redirectTo search param from the url
+        const redirectTo = url.searchParams.get("redirectTo");
+
+        // if redirectTo searchParam is set redirect to it
+        if (redirectTo) {
+            // slice the first character from the search param (slash '/')
+            redirect(302, `/${redirectTo.slice(1)}`);
+        }
+
+        redirect(302, "/dashboard");
     },
 };

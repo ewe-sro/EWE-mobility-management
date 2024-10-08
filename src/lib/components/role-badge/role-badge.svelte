@@ -7,7 +7,10 @@
 </script>
 
 <Badge
-	class={cn('text-muted-foreground font-medium rounded-md', role === 'ADMIN' && 'bg-sky-100')}
+	class={cn(
+		'text-muted-foreground font-medium bg-white dark:bg-slate-100 rounded-md',
+		role === 'ADMIN' && 'bg-black dark:bg-slate-700 text-white border-none'
+	)}
 	variant="outline"
 >
 	{role}

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { page } from '$app/stores';
+
 	import * as Card from '$lib/components/ui/card';
 	import * as Form from '$lib/components/ui/form';
 	import { Separator } from '$lib/components/ui/separator';
@@ -13,9 +15,11 @@
 	import TableSkeleton from '$lib/components/table-skeleton/table-skeleton.svelte';
 	import DataTableSession from '$lib/components/data-table/data-table-session.svelte';
 
+	import ShowToAdmins from '$lib/components/role-container/show-to-admins.svelte';
+
 	import { convertTimestampToDate, emptyStringOnNull } from '$lib/utils';
 
-	import { superForm } from 'sveltekit-superforms';
+	import SuperDebug, { superForm } from 'sveltekit-superforms';
 
 	export let data;
 
@@ -31,7 +35,18 @@
 		$formData.firstName = data.profile.firstName;
 		$formData.lastName = data.profile.lastName;
 	};
+
+	// Get the 'edit' searchParam
+	const editParam = $page.url.searchParams.get('edit');
+
+	$: if (editParam === 'true') {
+		editAccountForm = true;
+	}
 </script>
+
+<svelte:head>
+	<title>Uživatel – {data.user.email} – EMM</title>
+</svelte:head>
 
 <section class="py-16 ~px-4/8">
 	<div class="max-w-5xl m-auto flex flex-col gap-4">
@@ -43,9 +58,9 @@
 					<Card.Header class="p-0">
 						<div class="flex justify-between items-center">
 							<Card.Title tag="h2" class="text-xl font-semibold">Osobní údaje</Card.Title>
-							{#if data.loggedUser.role === 'ADMIN'}
+							<ShowToAdmins user={data.loggedUser}>
 								<Buttons bind:edit={editAccountForm} formId="profileForm" {toggleForm} />
-							{/if}
+							</ShowToAdmins>
 						</div>
 						<Separator />
 					</Card.Header>
@@ -112,7 +127,7 @@
 								</InputContainer>
 							</DataContainer>
 
-							{#if data.loggedUser.role === 'ADMIN'}
+							<ShowToAdmins user={data.loggedUser}>
 								<!-- ROLE -->
 								<DataContainer>
 									<DataLabel>Role</DataLabel>
@@ -120,7 +135,7 @@
 										<RoleBadge role={data.user.role} />
 									</DataPlaceholder>
 								</DataContainer>
-							{/if}
+							</ShowToAdmins>
 						</form>
 					</Card.Content>
 				</Card.Root>

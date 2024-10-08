@@ -21,7 +21,7 @@
 
 <DropdownMenu.Root preventScroll={false}>
 	<DropdownMenu.Trigger asChild let:builder>
-		<div class="group" class:active={$sortKeys[0].id === cellId}>
+		<div class="group" class:active={$sortKeys[0]?.id === cellId}>
 			<Button
 				variant="ghost"
 				builders={[builder]}
@@ -29,11 +29,11 @@
 		data-[state=open]:bg-muted"
 			>
 				<slot />
-				{#if $sortKeys[0].id === cellId}
-					{#if $sortKeys[0].order === 'asc'}
-						<ChevronUp size="14" class="text-black" />
+				{#if $sortKeys[0]?.id === cellId}
+					{#if $sortKeys[0]?.order === 'asc'}
+						<ChevronUp size="14" class="text-black dark:text-white" />
 					{:else}
-						<ChevronDown size="14" class="text-black" />
+						<ChevronDown size="14" class="text-black dark:text-white" />
 					{/if}
 				{:else}
 					<ChevronsUpDown size="14" />

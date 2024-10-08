@@ -8,13 +8,12 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import { Button } from '$lib/components/ui/button';
 
-	import ShowToAdminsAndManagers from '$lib/components/role-container/show-to-admins-and-managers.svelte';
+	import ShowToAdmins from '$lib/components/role-container/show-to-admins.svelte';
 
 	import { Ellipsis } from 'lucide-svelte';
 
 	export let id: string;
 	export let user;
-	export let userInCompany;
 
 	let deleteDialogOpen = false;
 
@@ -49,18 +48,18 @@
 			<DropdownMenu.Item class="text-muted-foreground font-medium" href="/chargers/{id}"
 				>Detail nabíjecí stanice</DropdownMenu.Item
 			>
-			<ShowToAdminsAndManagers {user} {userInCompany}>
+			<ShowToAdmins {user}>
 				<DropdownMenu.Item
 					class="text-muted-foreground font-medium"
 					href="/chargers/{id}?action=edit">Upravit údaje</DropdownMenu.Item
 				>
 				<DropdownMenu.Item
 					on:click={() => (deleteDialogOpen = true)}
-					class="text-destructive font-medium hover:bg-red-100 hover:text-destructive"
+					class="text-red-500 hover:text-red-500 dark:hover:text-white font-medium hover:bg-red-100 dark:hover:bg-red-500"
 				>
 					Odstranit nabíjecí stanici
 				</DropdownMenu.Item>
-			</ShowToAdminsAndManagers>
+			</ShowToAdmins>
 		</DropdownMenu.Group>
 	</DropdownMenu.Content>
 </DropdownMenu.Root>
@@ -69,7 +68,7 @@
 <AlertDialog.Root bind:open={deleteDialogOpen}>
 	<AlertDialog.Content>
 		<AlertDialog.Header>
-			<AlertDialog.Title>Jste jisti, že chcete smazat tuto nabíjecí stanici?</AlertDialog.Title>
+			<AlertDialog.Title>Jste si jisti, že chcete smazat tuto nabíjecí stanici?</AlertDialog.Title>
 			<AlertDialog.Description>
 				Tuto akci nelze vzít zpět. Dojde k trvalému smazání všech dat spojených s nabíjecí stanicí
 				včetně všech nabíjecích bodů a nabíjecích dat.

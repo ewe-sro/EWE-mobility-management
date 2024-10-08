@@ -16,13 +16,13 @@
 	let filterActive: boolean;
 
 	// Loop over the filterValues and check if any filter is active
-	$: for (const filter in $filterValues) {
-		if ($filterValues[filter] !== undefined) {
-			filterActive = true;
-			break;
-		} else {
-			filterActive = false;
-		}
+	const hasDefinedValue = (object: Object) =>
+		Object.values(object).some((val) => val !== undefined);
+
+	$: if (hasDefinedValue($filterValues)) {
+		filterActive = true;
+	} else {
+		filterActive = false;
 	}
 </script>
 

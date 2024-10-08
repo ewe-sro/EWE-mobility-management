@@ -8,6 +8,7 @@
 	import { CircleCheck } from 'lucide-svelte';
 
 	export let pluginStates;
+	export let dataLength;
 
 	const { filterValues } = pluginStates.colFilter; // column filter
 
@@ -24,8 +25,11 @@
 			builders={[builder]}
 			{pluginStates}
 			valueName="state"
-			preview={selectedValue.label}>Stav</FilterButton
+			preview={selectedValue.label}
+			disabled={dataLength === 0}
 		>
+			Stav
+		</FilterButton>
 	</Popover.Trigger>
 	<Popover.Content align="start" class="flex flex-col gap-4 w-full max-w-[15rem] py-2 px-3 mt-1">
 		<span class="text-sm font-medium">Filtrovat podle stavu</span>

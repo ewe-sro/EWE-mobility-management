@@ -1,6 +1,9 @@
 <script lang="ts">
+	import { cn } from '$lib/utils';
+
 	export let variant: 'online' | 'offline' | 'unavailable' | 'charging';
 	export let value: string | undefined = undefined;
+	export let size: 'sm' | 'xs' = 'sm';
 
 	let style: string;
 
@@ -21,7 +24,7 @@
 </script>
 
 <div class="inline-flex items-center gap-2 p-1">
-	<span class="relative flex h-2.5 w-2.5">
+	<span class={cn('relative flex', size === 'sm' && 'h-2.5 w-2.5', size === 'xs' && 'h-2 w-2')}>
 		{#if variant === 'charging'}
 			<span
 				class="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"

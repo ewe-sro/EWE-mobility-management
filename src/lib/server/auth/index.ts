@@ -32,8 +32,7 @@ declare module "lucia" {
 	}
 }
 
-// 
-interface DatabaseUserAttributes {
+export type DatabaseUserAttributes = {
 	email: string;
 	role: string;
 	createdAt: string;

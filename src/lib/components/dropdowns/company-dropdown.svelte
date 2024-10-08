@@ -39,7 +39,10 @@
 			class="actions group relative h-8 w-8 p-0"
 		>
 			<span class="sr-only">Otevřít menu</span>
-			<Ellipsis size="16" class="text-muted-foreground group-hover:text-black" />
+			<Ellipsis
+				size="16"
+				class="text-muted-foreground group-hover:text-black dark:group-hover:text-white"
+			/>
 		</Button>
 	</DropdownMenu.Trigger>
 	<DropdownMenu.Content align="end">
@@ -53,7 +56,7 @@
 					class="text-muted-foreground font-medium">Upravit údaje</DropdownMenu.Item
 				>
 				<DropdownMenu.Item
-					class="text-destructive font-medium hover:bg-red-100 hover:text-destructive"
+					class="text-red-500 hover:text-red-500 dark:hover:text-white font-medium hover:bg-red-100 dark:hover:bg-red-500"
 					on:click={() => (deleteDialogOpen = true)}>Smazat společnost</DropdownMenu.Item
 				>
 			{/if}

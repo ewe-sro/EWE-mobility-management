@@ -9,9 +9,9 @@
 	import DataTableSort from '$lib/components/data-table/controls/data-table-sort.svelte';
 	import StatusDot from '$lib/components/charging-status/status-dot/status-dot.svelte';
 
-	import { convertEnergyPower, convertTimestampToDate, convertSecondstoTime } from '$lib/utils';
+	import { convertEnergyPower, convertTimestampToDate, convertSecondsToTime } from '$lib/utils';
 
-	export let data;
+	export let data: any[];
 
 	// Create a table object from supplied data and use plugins for filtering etc.
 	const tableData = readable(data);
@@ -126,7 +126,7 @@
 			id: 'duration',
 			header: 'Čas nabíjení',
 			cell: ({ value }) => {
-				return convertSecondstoTime(value);
+				return convertSecondsToTime(value);
 			},
 			plugins: {
 				sort: {
@@ -184,7 +184,7 @@
 							<Subscribe attrs={cell.attrs()} let:attrs props={cell.props()} let:props>
 								<Table.Head
 									{...attrs}
-									class="group inline-flex items-center gap-1 h-auto mb-2 px-2 py-2 bg-slate-100 first:border-l last:border-r border-y
+									class="group inline-flex items-center gap-1 h-auto mb-2 px-2 py-2 bg-slate-100 dark:bg-slate-800 first:border-l last:border-r border-y
 									first:rounded-l-lg last:rounded-r-lg whitespace-nowrap"
 								>
 									{#if !props.sort.disabled}

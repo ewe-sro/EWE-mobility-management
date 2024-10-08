@@ -5,13 +5,11 @@
 	import * as Breadcrumb from '$lib/components/ui/breadcrumb';
 	import * as Card from '$lib/components/ui/card';
 	import { Separator } from '$lib/components/ui/separator';
-	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 
-	import { Eye, EyeOff, TriangleAlert } from 'lucide-svelte';
+	import { TriangleAlert } from 'lucide-svelte';
 
 	import { superForm } from 'sveltekit-superforms';
-	import SuperDebug from 'sveltekit-superforms';
 
 	import { emptyStringOnNull, getChargerStatus } from '$lib/utils';
 
@@ -23,13 +21,13 @@
 	import InputErrorContainer from '$lib/components/editable-data/input-error-container.svelte';
 
 	import ControllerCard from '$lib/components/cards/controller-card/controller-card.svelte';
+	import LastConnectedHoverCard from '$lib/components/last-connected-hover-card/last-connected-hover-card.svelte';
 	import ChargerStatus from '$lib/components/charging-status/charger-status.svelte';
 	import CompanyCombobox from '$lib/components/add-form/misc/company-combobox.svelte';
-	import ApiKeyButton from '$lib/components/api-key-button/api-key-button.svelte';
-	import ShowHideButton from '$lib/components/buttons/show-hide-button/show-hide-button.svelte';
+	import ApiKeyButton from '$lib/components/buttons/api-key-button.svelte';
+	import ShowHideButton from '$lib/components/buttons/show-hide-button.svelte';
 
 	import ShowToAdmins from '$lib/components/role-container/show-to-admins.svelte';
-	import TableSkeleton from '$lib/components/table-skeleton/table-skeleton.svelte';
 	import DataTableSession from '$lib/components/data-table/data-table-session.svelte';
 
 	export let data;
@@ -60,6 +58,10 @@
 	}
 </script>
 
+<svelte:head>
+	<title>Nabíjecí stanice – ID: {data.charger.charger.id} – EMM</title>
+</svelte:head>
+
 <Breadcrumb.Root class="p-4">
 	<Breadcrumb.List>
 		<Breadcrumb.Item>
@@ -80,7 +82,12 @@
 	<div class="max-w-5xl m-auto flex flex-col gap-4 w-full">
 		<div class="flex flex-col items-start gap-1">
 			<h1 class="text-3xl font-bold">{data.charger.charger.name}</h1>
-			<ChargerStatus {status} class="bg-white dark:bg-slate-950" />
+			<LastConnectedHoverCard lastConnected={data.charger.charger.lastConnected}>
+				<ChargerStatus
+					lastConnected={data.charger.charger.lastConnected}
+					class="bg-white dark:bg-slate-950"
+				/>
+			</LastConnectedHoverCard>
 		</div>
 
 		<div class="flex flex-col gap-20">
@@ -96,7 +103,7 @@
 				</div>
 			{/if}
 
-			<Card.Root class="flex flex-col gap-8 *:w-full p-8">
+			<Card.Root id="information" class="flex flex-col gap-8 *:w-full p-8">
 				<Card.Header class="p-0">
 					<div class="flex justify-between items-center">
 						<Card.Title tag="h2" class="text-xl font-semibold">Údaje nabíjecí stanice</Card.Title>
@@ -190,6 +197,7 @@
 											companies={data.companies}
 											bind:comboboxOpen={companyComboboxOpen}
 											label={false}
+											align="left"
 											class="max-w-xs"
 										/>
 									{/if}
@@ -249,10 +257,11 @@
 			<Separator />
 		</Card.Header>
 
-		{#if data.chargingSessions.length === 0}
-			<TableSkeleton />
-		{:else}
-			<DataTableSession data={data.chargingSessions} showController={true} />
-		{/if}
+		<DataTableSession
+			data={data.chargingSessions}
+			showController={true}
+			user={data.user}
+			userInCompany={data.userInCompany}
+		/>
 	</Card.Root>
 </section>

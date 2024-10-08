@@ -33,6 +33,10 @@
 	};
 </script>
 
+<svelte:head>
+	<title>Váš profil – EMM</title>
+</svelte:head>
+
 <section class="py-16 ~px-4/8 flex flex-col gap-20">
 	<div class="max-w-5xl m-auto flex flex-col gap-4 w-full">
 		<h1 class="text-3xl font-bold">Profil</h1>
@@ -187,12 +191,6 @@
 			<Separator />
 		</Card.Header>
 
-		{#if data.chargingSessions.length > 0}
-			<div class="flex flex-col gap-4">
-				<DataTableSession data={data.chargingSessions} />
-			</div>
-		{:else}
-			<TableSkeleton />
-		{/if}
+		<DataTableSession data={data.chargingSessions} showController={false} showControls={false} />
 	</Card.Root>
 </section>

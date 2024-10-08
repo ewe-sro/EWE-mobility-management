@@ -10,10 +10,12 @@ import { eq, or, desc } from 'drizzle-orm';
 import { db } from "$lib/server/db";
 import { chargingControllerTable, chargerTable, companyTable, usersToCompaniesTable, chargingSessionTable, rfidTagTable, userTable, profileTable } from "$lib/server/db/schema";
 
-export const load = async ({ locals, params, cookies }) => {
-    const user = locals.user;
+export const load = async ({ parent, locals, params, cookies }) => {
+    // Wait for the +layout.server.ts load function for route protection
+    await parent();
 
-    if (!user) redirect(303, "/login");
+    // Tell TypeScript locals.user is not null
+    const user = locals.user!;
 
     const [controller] = await db
         .select({
@@ -36,6 +38,8 @@ export const load = async ({ locals, params, cookies }) => {
             )
         );
 
+    // If the controller was not found or the user doesn't have the required permissions
+    // redirect them to '/chargers'
     if (!controller || !chargerPermission && user.role != "ADMIN") redirect(303, "/chargers", { type: "error", message: "Nabíjecí relace nebyla nalezena" }, cookies);
 
     const [chargingSession] = await db
@@ -46,6 +50,8 @@ export const load = async ({ locals, params, cookies }) => {
     let employeeRfid;
     let rfidDescription;
 
+    // If the charging session has an RFID
+    // get the corresponding employee data or the description of the RFID tag
     if (chargingSession.rfidTag) {
         [employeeRfid] = await db
             .select({

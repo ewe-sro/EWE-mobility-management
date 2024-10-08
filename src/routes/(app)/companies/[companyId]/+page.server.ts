@@ -26,10 +26,12 @@ const companyEditSchema = companySchema.omit({
     logo: true,
 });
 
-export const load = async ({ locals, params, cookies }) => {
-    const user = locals.user;
+export const load = async ({ parent, locals, params, cookies }) => {
+    // Wait for the +layout.server.ts load function for route protection
+    await parent();
 
-    if (!user) redirect(303, "/login", { type: "error", message: "Pro přístup k této stránce se musíte přihlásit" }, cookies);
+    // Tell TypeScript locals.user is not null
+    const user = locals.user!;
 
     // Check if the logged in user has access
     const [userInCompany] = await db
@@ -42,11 +44,9 @@ export const load = async ({ locals, params, cookies }) => {
             )
         );
 
-    if (user.role !== "ADMIN") {
+    if (user.role !== "ADMIN" && !userInCompany) {
         // If the logged in user is not an ADMIN and is not an employee of the company redirect to /companies
-        if (!userInCompany) {
-            redirect(303, "/companies", { type: "error", message: "Společnost nebyla nalezena" }, cookies);
-        }
+        redirect(303, "/companies", { type: "error", message: "Společnost nebyla nalezena" }, cookies);
     }
 
     // Get the company record from database
@@ -55,7 +55,7 @@ export const load = async ({ locals, params, cookies }) => {
         .from(companyTable)
         .where(eq(companyTable.id, Number(params.companyId)));
 
-    // Create a forms
+    // Create forms
     const companyForm = await superValidate(company, zod(companyEditSchema));
     const employeeForm = await superValidate(zod(employeeSchema));
     const chargerForm = await superValidate(zod(chargerSchema));
@@ -101,37 +101,37 @@ export const load = async ({ locals, params, cookies }) => {
             ));
 
     // Get last 10 charging sessions
-    let chargingSessions;
+    let chargingSessions: any[];
 
-    if (userInCompany.role !== "Host") {
-        chargingSessions = await db
-            .select({
-                chargingSession: chargingSessionTable,
-                charger: chargerTable,
-                controller: chargingControllerTable
-            })
-            .from(chargingSessionTable)
-            .leftJoin(chargingControllerTable, eq(chargingSessionTable.controllerId, chargingControllerTable.id))
-            .leftJoin(chargerTable, eq(chargingControllerTable.chargerId, chargerTable.id))
-            .where(eq(chargerTable.companyId, company.id))
-            .orderBy(desc(chargingSessionTable.startTimestamp))
-            .limit(10);
-    } else {
-        chargingSessions = await db
-            .select({
-                chargingSession: chargingSessionTable,
-                charger: chargerTable,
-                controller: chargingControllerTable
-            })
-            .from(chargingSessionTable)
-            .leftJoin(chargingControllerTable, eq(chargingSessionTable.controllerId, chargingControllerTable.id))
-            .leftJoin(chargerTable, eq(chargingControllerTable.chargerId, chargerTable.id))
+    const sessionsQuery = db
+        .select({
+            chargingSession: chargingSessionTable,
+            charger: chargerTable,
+            controller: chargingControllerTable
+        })
+        .from(chargingSessionTable)
+        .leftJoin(chargingControllerTable, eq(chargingSessionTable.controllerId, chargingControllerTable.id))
+        .leftJoin(chargerTable, eq(chargingControllerTable.chargerId, chargerTable.id))
+        .where(eq(chargerTable.companyId, company.id))
+        .orderBy(desc(chargingSessionTable.startTimestamp))
+        .limit(10)
+        .$dynamic();
+
+    if (user.role === "ADMIN" || userInCompany.role !== "Host") {
+        // If logged in user is admin, manager or employee
+        // show the last 10 charging session
+        chargingSessions = await sessionsQuery;
+
+    } else if (userInCompany.rfidTag) {
+        // If the logged in user has RFID set
+        // search for charging sessions that have the corresponding RFID
+        chargingSessions = await sessionsQuery
             .where(and(
                 eq(chargerTable.companyId, company.id),
                 eq(chargingSessionTable.rfidTag, userInCompany.rfidTag)
-            ))
-            .orderBy(desc(chargingSessionTable.startTimestamp))
-            .limit(10);
+            ));
+    } else {
+        chargingSessions = [];
     }
 
     // Get charging stats

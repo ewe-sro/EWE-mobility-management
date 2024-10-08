@@ -2,16 +2,40 @@
 	import { writable } from 'svelte/store';
 
 	import { createTable, Render, Subscribe, createRender } from 'svelte-headless-table';
-	import { addGridLayout, addSortBy, addHiddenColumns } from 'svelte-headless-table/plugins';
-
-	import { Separator } from '$lib/components/ui/separator';
+	import {
+		addGridLayout,
+		addSortBy,
+		addHiddenColumns,
+		addColumnFilters
+	} from 'svelte-headless-table/plugins';
 
 	import * as Table from '$lib/components/ui/table';
 
+	import RoleBadge from '$lib/components/role-badge/role-badge.svelte';
 	import DataTableActions from './data-table-actions-users.svelte';
 	import DataTableSort from '$lib/components/data-table/controls/data-table-sort.svelte';
+	import DataTableTextFilter from '$lib/components/data-table/column-filters/text-filter.svelte';
+	import DataTableResetFilter from '$lib/components/data-table/controls/data-table-reset-filter.svelte';
 
-	export let data;
+	import { textFilter } from '$lib/components/data-table/column-filters/filters';
+
+	type UserData = {
+		user: {
+			email: string;
+			role: string;
+			password: string;
+			id: string;
+			createdAt: Date;
+		};
+		profile: {
+			firstName: string | null;
+			lastName: string | null;
+			id: number;
+			userId: string;
+		} | null;
+	}[];
+
+	export let data: UserData;
 	export let loggedUser;
 
 	const tableData = writable(data);
@@ -27,7 +51,8 @@
 			disableMultiSort: true,
 			toggleOrder: ['asc', 'desc']
 		}),
-		hide: addHiddenColumns()
+		hide: addHiddenColumns(),
+		colFilter: addColumnFilters()
 	});
 
 	// to handle delete actions - delete row from UI
@@ -55,21 +80,14 @@
 			plugins: {
 				sort: {
 					disable: false
+				},
+				colFilter: {
+					fn: textFilter
 				}
 			}
 		}),
 		table.column({
-			accessor: (item) => item.user.role,
-			id: 'role',
-			header: 'Role',
-			plugins: {
-				sort: {
-					disable: true
-				}
-			}
-		}),
-		table.column({
-			accessor: (item) => item.profile.firstName,
+			accessor: (item) => item.profile?.firstName,
 			id: 'firstName',
 			header: 'Jméno',
 			plugins: {
@@ -79,7 +97,7 @@
 			}
 		}),
 		table.column({
-			accessor: (item) => item.profile.lastName,
+			accessor: (item) => item.profile?.lastName,
 			id: 'lastName',
 			header: 'Příjmení',
 			plugins: {
@@ -89,17 +107,20 @@
 			}
 		}),
 		table.column({
-			accessor: 'companyName',
-			id: 'companyName',
-			header: 'Společnost',
+			accessor: (item) => item.user.role,
+			id: 'role',
+			header: 'Role',
+			cell: ({ value }) => {
+				return createRender(RoleBadge, { role: value });
+			},
 			plugins: {
 				sort: {
-					disable: false
+					disable: true
 				}
 			}
 		}),
 		table.column({
-			accessor: (item) => item.user.id,
+			accessor: (item: any) => item.user.id,
 			id: 'actions',
 			header: '',
 			cell: ({ value }) => {
@@ -128,9 +149,10 @@
 	} = table.createViewModel(columns);
 
 	const { hiddenColumnIds } = pluginStates.hide; // column visibility
+	const { filterValues } = pluginStates.colFilter; // column filter
 
 	// Hidden columns by default
-	const hiddenColumns = ['id', 'role'];
+	const hiddenColumns = ['id'];
 
 	const ids = flatColumns.map((col) => col.id);
 	let hideForId = Object.fromEntries(ids.map((id) => [id, !hiddenColumns.includes(id)]));
@@ -138,9 +160,20 @@
 	$: $hiddenColumnIds = Object.entries(hideForId)
 		.filter(([, hide]) => !hide)
 		.map(([id]) => id);
+
+	const resetFilterVariables = () => {
+		$filterValues = {};
+	};
 </script>
 
-<div class="w-full overflow-x-auto">
+<div class="flex flex-col items-start gap-4 w-full overflow-x-auto">
+	<div class="flex items-center gap-2">
+		<DataTableTextFilter {pluginStates} dataLength={data.length} valueName="email" title="Email"
+			>Filtrovat podle email</DataTableTextFilter
+		>
+		<DataTableResetFilter {pluginStates} on:filterReset={resetFilterVariables} />
+	</div>
+
 	<Table.Root {...$tableAttrs}>
 		<Table.Header {...$tableHeadAttrs}>
 			{#each $headerRows as headerRow (headerRow.id)}
@@ -150,7 +183,7 @@
 							<Subscribe attrs={cell.attrs()} let:attrs props={cell.props()} let:props>
 								<Table.Head
 									{...attrs}
-									class="group inline-flex items-center gap-1 h-auto mb-2 px-2 py-2 bg-slate-100 first:border-l last:border-r border-y
+									class="group inline-flex items-center gap-1 h-auto mb-2 px-2 py-2 bg-slate-100 dark:bg-slate-800 first:border-l last:border-r border-y
 									first:rounded-l-lg last:rounded-r-lg whitespace-nowrap"
 								>
 									{#if !props.sort.disabled}

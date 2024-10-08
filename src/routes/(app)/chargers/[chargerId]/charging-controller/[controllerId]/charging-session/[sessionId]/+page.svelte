@@ -14,12 +14,16 @@
 	import {
 		emptyStringOnNull,
 		convertTimestampToDate,
-		convertSecondstoTime,
+		convertSecondsToTime,
 		convertEnergyPower
 	} from '$lib/utils';
 
 	export let data;
 </script>
+
+<svelte:head>
+	<title>Nabíjecí relace – ID: {data.chargingSession.id} – EMM</title>
+</svelte:head>
 
 <Breadcrumb.Root class="p-4">
 	<Breadcrumb.List>
@@ -135,7 +139,7 @@
 						<DataLabel>Čas nabíjení</DataLabel>
 						<InputContainer>
 							<DataPlaceholder>
-								{convertSecondstoTime(data.chargingSession.duration)}
+								{convertSecondsToTime(data.chargingSession.duration)}
 							</DataPlaceholder>
 						</InputContainer>
 					</DataContainer>

@@ -1,7 +1,7 @@
+import { redirect } from "sveltekit-flash-message/server";
+
 import { lucia } from "$lib/server/auth";
 import type { Handle } from "@sveltejs/kit";
-
-import { redirect } from "@sveltejs/kit";
 
 export const handle: Handle = async ({ event, resolve }) => {
 	// Get the session ID from cookies
@@ -36,11 +36,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 			...sessionCookie.attributes
 		});
 	}
-
-	// If a user is logged in and attempts to access the login or register page, redirect them to the dashboard
-	//if (session && AUTH_ROUTES.includes(event.url.pathname)) {
-	//	throw redirect(303, DASHBOARD_ROUTE);
-	//}
 
 	// Persist the user and session information in the event locals for use within endpoint handlers and page components
 	event.locals.user = user;

@@ -7,7 +7,7 @@
 
 	import { TriangleAlert, Loader2 } from 'lucide-svelte';
 
-	import { superForm } from 'sveltekit-superforms';
+	import SuperDebug, { superForm } from 'sveltekit-superforms';
 
 	export let data;
 

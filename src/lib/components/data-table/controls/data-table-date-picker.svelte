@@ -19,6 +19,7 @@
 	import { CalendarIcon, CircleX } from 'lucide-svelte';
 
 	export let pluginStates;
+	export let dataLength;
 
 	let datepickerOpen = false;
 
@@ -105,6 +106,7 @@
 			variant="outline"
 			class="flex items-center gap-1.5 h-auto px-2 py-1.5 text-sm shadow-sm"
 			builders={[builder]}
+			disabled={dataLength === 0}
 		>
 			<CalendarIcon size="16" />
 
@@ -123,7 +125,7 @@
 			{/if}
 		</Button>
 	</Popover.Trigger>
-	<Popover.Content class="flex items-stretch gap-6 w-auto p-0 mt-2" align="center">
+	<Popover.Content class="flex items-stretch gap-6 w-auto p-0 mt-2" align="end">
 		<div class="flex flex-col justify-between items-start p-4">
 			<div class="flex flex-col items-start gap-2 *:h-auto *:py-1.5 *:px-2 *:text-muted-foreground">
 				<Button on:click={() => (value = filterPresets.last7Days)} variant="ghost">

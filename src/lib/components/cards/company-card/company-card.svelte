@@ -12,7 +12,6 @@
 	import { emptyStringOnNull } from '$lib/utils';
 
 	export let company;
-	export let employeeCount;
 	export let user;
 	export let chargingData;
 
@@ -64,7 +63,7 @@
 			</CompanySubcard>
 			<CompanySubcard>
 				<span slot="valueName">Zaměstnanci</span>
-				<span slot="value">{employeeCount[0]?.count ?? 0}</span>
+				<span slot="value">{company.employeeCount ?? 0}</span>
 			</CompanySubcard>
 		</div>
 		<CompanyChargingData

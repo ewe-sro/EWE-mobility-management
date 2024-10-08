@@ -15,13 +15,15 @@ import { eq } from 'drizzle-orm';
 import { db } from "$lib/server/db";
 import { userTable, passwordResetTable } from "$lib/server/db/schema";
 
-const resetSchema = registerSchema.pick({
-    password: true,
-    confirmPassword: true
-}).refine((data) => data.password !== data.confirmPassword, {
-    message: "Hesla se neshodují",
-    path: ["confirmPassword"],
-});
+const resetPasswordSchema = registerSchema
+    .pick({
+        password: true,
+        confirmPassword: true
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+        message: "Hesla se neshodují",
+        path: ["confirmPassword"],
+    });
 
 export const load = (async ({ params }) => {
     // Get verification token from URL parameter
@@ -41,7 +43,7 @@ export const load = (async ({ params }) => {
     // Check if token is not expired
     const tokenValid = ((isWithinExpirationDate(token.expiresAt)) ? true : false)
 
-    const form = await superValidate(zod(resetSchema));
+    const form = await superValidate(zod(resetPasswordSchema));
 
     return {
         form: form,
@@ -53,7 +55,7 @@ export const load = (async ({ params }) => {
 export const actions = {
     default: async ({ request, params, cookies }) => {
         // get form data and validate them
-        const form = await superValidate(request, zod(resetSchema));
+        const form = await superValidate(request, zod(resetPasswordSchema));
 
         // If the submitted form is invalid
         if (!form.valid) {
@@ -82,6 +84,6 @@ export const actions = {
             .set({ password: hashedPassword })
             .where(eq(userTable.id, token.userId));
 
-        redirect(303, "/login", { type: "success", message: "Vaše heslo bylo úspěšně změněno" }, cookies);
+        redirect(302, "/login", { type: "success", message: "Vaše heslo bylo úspěšně změněno" }, cookies);
     },
 };

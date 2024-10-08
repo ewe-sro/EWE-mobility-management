@@ -1,8 +1,5 @@
 import { error, fail } from "@sveltejs/kit";
 
-import { writeFile } from "fs";
-import { extname } from 'path';
-
 import { redirect, setFlash } from 'sveltekit-flash-message/server';
 
 import { superValidate, withFiles, message } from 'sveltekit-superforms';
@@ -13,12 +10,12 @@ import { count, sum, eq, and, gte, sql, lt } from 'drizzle-orm';
 import { db } from "$lib/server/db";
 import { companyTable, chargerTable, chargingControllerTable, usersToCompaniesTable, chargingSessionTable, controllerDataTable } from "$lib/server/db/schema";
 
-import { generateId } from 'lucia';
+export const load = async ({ parent, locals }) => {
+    // Wait for the +layout.server.ts load function for route protection
+    await parent();
 
-export const load = async ({ locals, cookies }) => {
-    if (!locals.user) {
-        redirect(303, "/login", { type: "error", message: "Pro přístup k této stránce se musíte přihlásit" }, cookies);
-    }
+    // Tell TypeScript locals.user is not null
+    const user = locals.user!;
 
     // Subquery for getting number of charging controllers
     const sqController = db
@@ -44,63 +41,48 @@ export const load = async ({ locals, cookies }) => {
         .groupBy(chargerTable.id)
         .as("sqAvailable");
 
+    // Subquery for getting number of employees in company
+    const sqEmployee = db
+        .select({
+            companyId: usersToCompaniesTable.companyId,
+            employeeCount: count(usersToCompaniesTable.userId).as("employeeCount")
+        })
+        .from(usersToCompaniesTable)
+        .groupBy(usersToCompaniesTable.companyId)
+        .as("sqEmployee");
 
     let companies;
-    let employeeCount;
 
-    if (locals.user.role === "ADMIN") {
-        // Get all companies if the logged in user is ADMIN
-        companies = await db
-            .select({
-                companyTable,
-                chargerCount: count(chargerTable.id),
-                controllerCount: sum(sqController.controllerCount),
-                availableCount: sum(sqAvailable.availableCount)
-            })
-            .from(companyTable)
-            .leftJoin(chargerTable, eq(companyTable.id, chargerTable.companyId))
-            .leftJoin(sqController, eq(chargerTable.id, sqController.chargerId))
-            .leftJoin(sqAvailable, eq(chargerTable.id, sqAvailable.chargerId))
-            .groupBy(companyTable.id)
-            .orderBy(companyTable.name);
+    // Dynamic query for selecting companies
+    const companyQuery = db
+        .select({
+            companyTable,
+            chargerCount: count(chargerTable.id),
+            controllerCount: sum(sqController.controllerCount),
+            availableCount: sum(sqAvailable.availableCount),
+            employeeCount: sum(sqEmployee.employeeCount),
+        })
+        .from(companyTable)
+        .leftJoin(chargerTable, eq(companyTable.id, chargerTable.companyId))
+        .leftJoin(sqController, eq(chargerTable.id, sqController.chargerId))
+        .leftJoin(sqAvailable, eq(chargerTable.id, sqAvailable.chargerId))
+        .leftJoin(sqEmployee, eq(companyTable.id, sqEmployee.companyId))
+        .groupBy(companyTable.id)
+        .orderBy(companyTable.name)
+        .$dynamic();
 
-        employeeCount = await db
-            .select({
-                companyId: usersToCompaniesTable.companyId,
-                count: count(usersToCompaniesTable.userId)
-            })
-            .from(usersToCompaniesTable)
-            .groupBy(usersToCompaniesTable.companyId);
+    if (user.role === "ADMIN") {
+        // Get all companies if the logged in user as ADMIN
+        companies = await companyQuery;
 
     } else {
         // Get companies that the logged in user is associated with
-        companies = await db
-            .select({
-                companyTable,
-                chargerCount: count(chargerTable.id),
-                controllerCount: sum(sqController.controllerCount),
-                availableCount: sum(sqAvailable.availableCount)
-            })
-            .from(companyTable)
-            .leftJoin(chargerTable, eq(companyTable.id, chargerTable.companyId))
-            .leftJoin(sqController, eq(chargerTable.id, sqController.chargerId))
-            .leftJoin(sqAvailable, eq(chargerTable.id, sqAvailable.chargerId))
+        companies = await companyQuery
             .leftJoin(usersToCompaniesTable, eq(usersToCompaniesTable.companyId, companyTable.id))
-            .where(eq(usersToCompaniesTable.userId, locals.user.id))
-            .groupBy(companyTable.id)
-            .orderBy(companyTable.name);
-
-        employeeCount = await db
-            .select({
-                companyId: usersToCompaniesTable.companyId,
-                count: count(usersToCompaniesTable.userId)
-            })
-            .from(usersToCompaniesTable)
-            .groupBy(usersToCompaniesTable.companyId)
-            .where(eq(usersToCompaniesTable.userId, locals.user.id));
+            .where(eq(usersToCompaniesTable.userId, user.id));
     }
 
-    // Create a dataset for graph
+    // Create TypeScript interfaces for chargingData variable
     interface ChargingSubdata {
         "thisMonth": any,
         "lastMonth": any,
@@ -197,25 +179,27 @@ export const load = async ({ locals, cookies }) => {
         };
     }
 
+    // Form for adding a company
     const form = await superValidate(zod(companySchema));
 
     return {
-        companies: companies,
-        chargingData: chargingData,
-        employeeCount: employeeCount,
-        user: locals.user,
-        form: form
+        companies,
+        chargingData,
+        user,
+        form
     };
 }
 
 export const actions = {
     default: async ({ request, locals, cookies }) => {
-        if (!locals.user) {
-            error(401, { message: "K provedení této akce se musíte přihlásit" });
+        const user = locals.user;
+
+        if (!user) {
+            error(401, { message: "K provedení této akce se musíte přihlásit." });
         }
 
-        if (locals.user.role !== "ADMIN") {
-            error(403, { message: "Nemáte oprávnění k této akci" });
+        if (user.role !== "ADMIN") {
+            error(403, { message: "Nemáte oprávnění k této akci." });
         }
 
         // get form data and validate them
@@ -223,7 +207,7 @@ export const actions = {
 
         // If the submitted form is invalid
         if (!form.valid) {
-            return fail(400, withFiles({ form }));
+            return fail(400);
         }
 
         // Check if company with same IČO is already in the database
@@ -236,42 +220,15 @@ export const actions = {
             return message(form, "Společnost s tímto IČO je již přidána");
         }
 
-        // If company logo was submitted save it
-        if (form.data.logo) {
-            const logoId = generateId(6);
-
-            const fileName = `${logoId}${extname(form.data.logo.name)}`;
-            const filePath = `static/images/logos/${fileName}`;
-
-            // Write the file to $lib/assets/images/logos
-            writeFile(filePath, Buffer.from(await form.data.logo.arrayBuffer()), err => {
-                if (err) {
-                    console.log(err);
-                    error(500, { message: "Něco se nepovedlo. Zkuste to prosím znovu." });
-                }
-            });
-
-            // Add the data to database
-            await db.insert(companyTable).values({
-                name: form.data.name,
-                ic: form.data.ic,
-                dic: form.data.dic,
-                city: form.data.city,
-                street: form.data.street,
-                zip: form.data.zip,
-                logo: fileName
-            });
-        } else {
-            // Add the data to database
-            await db.insert(companyTable).values({
-                name: form.data.name,
-                ic: form.data.ic,
-                dic: form.data.dic,
-                city: form.data.city,
-                street: form.data.street,
-                zip: form.data.zip
-            });
-        }
+        // Add the data to database
+        await db.insert(companyTable).values({
+            name: form.data.name,
+            ic: form.data.ic,
+            dic: form.data.dic,
+            city: form.data.city,
+            street: form.data.street,
+            zip: form.data.zip
+        });
 
         setFlash({ type: "success", message: "Společnost byla úspěšně přidána" }, cookies);
         return withFiles({ form });

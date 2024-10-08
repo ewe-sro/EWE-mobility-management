@@ -21,6 +21,10 @@
 		$formData.lastName = data.invitedUser.invitation.lastName;
 </script>
 
+<svelte:head>
+	<title>Registrace – EMM</title>
+</svelte:head>
+
 <Card.Header class="p-0 pb-8">
 	<Card.Title tag="h1" class="text-2xl font-bold">Registrace</Card.Title>
 	<Card.Description>Dokončete registraci vyplněním tohoto formuláře.</Card.Description>
@@ -131,6 +135,7 @@
 		{/if}
 
 		<Form.Button
+			disabled={$delayed}
 			class="w-full text-white focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-primary/30 focus-visible:border-primary/70"
 		>
 			{#if $delayed}

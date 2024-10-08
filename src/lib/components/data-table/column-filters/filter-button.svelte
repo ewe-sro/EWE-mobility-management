@@ -10,12 +10,14 @@
 	export let valueName: string;
 	export let preview: string;
 	export let builders: [any] | undefined = undefined;
+	export let disabled: boolean = false;
 
 	const { filterValues } = pluginStates.colFilter; // column filter
 </script>
 
 <Button
 	variant="outline"
+	{disabled}
 	{builders}
 	class={cn(
 		'flex items-center gap-1.5 h-7 py-1 px-1.5 text-muted-foreground hover:text-black dark:hover:text-white border-dashed rounded-full',

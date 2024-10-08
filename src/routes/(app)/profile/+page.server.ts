@@ -14,12 +14,12 @@ const userAccountSchema = userSchema.pick({
     lastName: true
 });
 
-export const load = (async ({ locals, cookies }) => {
-    const user = locals.user;
+export const load = (async ({ parent, locals }) => {
+    // Wait for the +layout.server.ts load function for route protection
+    await parent();
 
-    if (!user) {
-        redirect(301, "/login", { type: "error", message: "Pro přístup k této stránce se musíte přihlásit" }, cookies);
-    }
+    // Tell TypeScript locals.user is not null
+    const user = locals.user!;
 
     const [userAccountData] = await db
         .select({
@@ -68,7 +68,7 @@ export const load = (async ({ locals, cookies }) => {
 export const actions = {
     default: async ({ request, cookies, locals }) => {
         if (!locals.user) {
-            redirect(401, "/login", { type: "error", message: "Pro přístup k této stránce se musíte přihlásit" }, cookies);
+            redirect(303, "/login", { type: "error", message: "Pro přístup k této stránce se musíte přihlásit" }, cookies);
         }
 
         // get form data and validate them

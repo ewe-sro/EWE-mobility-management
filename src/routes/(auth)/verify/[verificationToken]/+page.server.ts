@@ -60,14 +60,8 @@ export const actions = {
         }
 
         const [invitedUser] = await db
-            .select({
-                email: registerInvitationTable.email,
-                firstName: registerInvitationTable.firstName,
-                lastName: registerInvitationTable.lastName,
-                companyId: companyTable.id
-            })
+            .select()
             .from(registerInvitationTable)
-            .leftJoin(companyTable, eq(registerInvitationTable.companyId, companyTable.id))
             .where(eq(registerInvitationTable.id, params.verificationToken));
 
 
@@ -77,13 +71,13 @@ export const actions = {
         }
 
         // Check if user didn't change the disabled inputs
-        if (invitedUser.email != form.data.email) {
+        if (invitedUser.email !== form.data.email) {
             return message(form, "Zadaný e-mail je neplatný", {
                 status: 401
             });
         }
 
-        if (invitedUser.companyId != form.data.companyId) {
+        if (invitedUser.companyId !== form.data.companyId) {
             return message(form, "Zadaná společnost je neplatná", {
                 status: 401
             });
@@ -112,7 +106,7 @@ export const actions = {
             .insert(userTable)
             .values({
                 id: userId,
-                email: form.data.email,
+                email: invitedUser.email,
                 password: hashedPassword
             });
 
@@ -125,12 +119,9 @@ export const actions = {
                 userId: userId
             });
 
-        // Update the register invitation record
+        // Delete the register invitation record
         await db
-            .update(registerInvitationTable)
-            .set({
-                userId: userId
-            })
+            .delete(registerInvitationTable)
             .where(eq(registerInvitationTable.id, params.verificationToken));
 
         // Add the created user to company
@@ -139,7 +130,8 @@ export const actions = {
                 .insert(usersToCompaniesTable)
                 .values({
                     userId: userId,
-                    companyId: form.data.companyId
+                    companyId: form.data.companyId,
+                    role: invitedUser.companyRole
                 });
         }
 

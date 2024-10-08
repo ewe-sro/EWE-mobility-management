@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { source } from 'sveltekit-sse';
 
 	import * as Breadcrumb from '$lib/components/ui/breadcrumb';
 	import * as Card from '$lib/components/ui/card';
@@ -13,41 +13,30 @@
 	import DataTableSession from '$lib/components/data-table/data-table-session.svelte';
 	import ControllerStatus from '$lib/components/charging-status/controller-status.svelte';
 
-	import { superForm } from 'sveltekit-superforms';
-	import SuperDebug from 'sveltekit-superforms';
-
-	import { convertEnergyPower, convertSecondstoTime, emptyStringOnNull } from '$lib/utils';
+	import {
+		convertEnergyPower,
+		convertSecondsToTime,
+		emptyStringOnNull,
+		getChargerStatus
+	} from '$lib/utils';
 
 	export let data;
 
-	let apiData: any;
+	// Get the charger status
+	let status = getChargerStatus(data.controller.charger?.lastConnected);
+
+	const apiData = source(
+		`/api/charger/${data.controller.charger?.id}/controller/${data.controller.controller.id}/charging-data`
+	).select('charging-data');
+
 	// if refreshed data from the API exists display it
 	// if not display the load function data
-	$: chargingData = !apiData ? data.controller : apiData;
-
-	async function getChargingData() {
-		const response = await fetch(
-			`/api/charger/${data.controller.charger?.id}/controller/${data.controller.controller.id}/get-charging-data`
-		);
-
-		apiData = await response.json();
-	}
-
-	let interval: NodeJS.Timeout;
-	onMount(() => {
-		getChargingData().then(() => {
-			// Set up interval to refresh data every 2 seconds
-			interval = setInterval(getChargingData, 2000);
-		});
-	});
-
-	// Clean up interval on component destroy
-	onDestroy(() => {
-		if (interval) {
-			clearInterval(interval);
-		}
-	});
+	$: chargingData = !$apiData ? data.controller : JSON.parse($apiData);
 </script>
+
+<svelte:head>
+	<title>Nabíjecí bod – ID: {chargingData.controller.id} – EMM</title>
+</svelte:head>
 
 <Breadcrumb.Root class="p-4">
 	<Breadcrumb.List>
@@ -90,7 +79,11 @@
 						<DataLabel>Stav</DataLabel>
 						<InputContainer>
 							<DataPlaceholder>
-								<ControllerStatus status={chargingData.controllerData?.connectedState} />
+								<ControllerStatus
+									connectedState={status === 'online'
+										? chargingData.controllerData?.connectedState
+										: 'offline'}
+								/>
 							</DataPlaceholder>
 						</InputContainer>
 					</DataContainer>
@@ -101,7 +94,7 @@
 							<DataLabel>Doba nabíjení</DataLabel>
 							<InputContainer>
 								<DataPlaceholder>
-									{convertSecondstoTime(chargingData.controllerData.chargeTime)}
+									{convertSecondsToTime(chargingData.controllerData.chargeTime)}
 								</DataPlaceholder>
 							</InputContainer>
 						</DataContainer>
@@ -111,7 +104,7 @@
 							<DataLabel>Doba připojení</DataLabel>
 							<InputContainer>
 								<DataPlaceholder>
-									{convertSecondstoTime(chargingData.controllerData.connectedTime)}
+									{convertSecondsToTime(chargingData.controllerData.connectedTime)}
 								</DataPlaceholder>
 							</InputContainer>
 						</DataContainer>
@@ -248,10 +241,10 @@
 			<Separator />
 		</Card.Header>
 
-		{#if data.chargingSessions.length === 0}
-			<TableSkeleton />
-		{:else}
-			<DataTableSession data={data.chargingSessions} />
-		{/if}
+		<DataTableSession
+			data={data.chargingSessions}
+			user={data.user}
+			userInCompany={data.userInCompany}
+		/>
 	</Card.Root>
 </section>
